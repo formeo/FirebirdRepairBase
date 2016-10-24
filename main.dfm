@@ -5108,9 +5108,9 @@ object frmMain: TfrmMain
     object lbl7: TLabel
       Left = 8
       Top = 6
-      Width = 114
+      Width = 88
       Height = 19
-      Caption = #1041#1072#1079#1072' '#1076#1072#1085#1085#1099#1093':'
+      Caption = 'Data base:'
       Font.Charset = RUSSIAN_CHARSET
       Font.Color = clWindowText
       Font.Height = -16
@@ -5121,9 +5121,9 @@ object frmMain: TfrmMain
     object lbl8: TLabel
       Left = 8
       Top = 28
-      Width = 39
+      Width = 47
       Height = 19
-      Caption = #1041#1072#1079#1072
+      Caption = 'Name'
       Font.Charset = RUSSIAN_CHARSET
       Font.Color = clWindowText
       Font.Height = -16
@@ -5259,9 +5259,9 @@ object frmMain: TfrmMain
         object lbl1: TLabel
           Left = 8
           Top = 8
-          Width = 60
+          Width = 50
           Height = 13
-          Caption = #1055#1088#1086#1075#1088#1077#1089#1089': '
+          Caption = 'process: '
           Font.Charset = RUSSIAN_CHARSET
           Font.Color = clWindowText
           Font.Height = -11
@@ -5622,7 +5622,6 @@ object frmMain: TfrmMain
     Top = 544
     object mniN2: TMenuItem
       Caption = #1057#1086#1093#1088#1072#1085#1080#1090#1100' '#1074' '#1092#1072#1081#1083
-      OnClick = mniN2Click
     end
   end
   object pmSaveLog: TPopupMenu

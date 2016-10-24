@@ -2,7 +2,7 @@ unit uCommon;
 
 interface
 uses 
-  SysUtils, Classes,Windows;
+  Classes,Windows,SysUtils;
 const
   MAX_PAGE_SIZE = 32768;
   MIN_PAGE_SIZE = 1024;
@@ -122,6 +122,9 @@ TPointer_page =  record
 
 
 function getCurrPageSize(const fileName: string):Integer;
+function ByteToHex(InByte:byte):shortstring;
+function GetFileSizeBase(const AFileName: String): Int64;
+procedure CopyDatabaseFile( ADatabaseOriginalPath: string; ADatabaseCopyPath: String);
 
 implementation
 
@@ -141,7 +144,65 @@ begin
   Result:=HeaderPage.fix_data.hdr_page_size;
 end;
 
+function ByteToHex(InByte:byte):shortstring;
+const Digits:array[0..15] of char='0123456789ABCDEF';
+begin
+   result:=digits[InByte shr 4]+digits[InByte and $0F];
+end;
+
+function GetFileSizeBase(const AFileName: String): Int64;
+var
+  SR : TSearchRec;
+begin
+  Result := -1;
+  if FindFirst(AFileName, faAnyFile, SR) = 0 then
+  try
+    Result := (SR.FindData.nFileSizeHigh * Int64(MAXDWORD)) + SR.FindData.nFileSizeLow;
+  finally
+    FindClose(SR);
+  end;
+end;
 
 
+procedure CopyDatabaseFile( ADatabaseOriginalPath: string; ADatabaseCopyPath: String);
+const
+  BUFFER_SIZE = 10240; // 10KB
+var
+  FromFile, ToFile: TFileStream;
+  Buffer: array[0..BUFFER_SIZE - 1] of byte;
+  NumRead: Integer;
+  FileSize, CopiedSize: Int64;
+begin
+  FileSize := GetFileSizeBase(ADatabaseOriginalPath);
+  FromFile := TFileStream.Create(ADatabaseOriginalPath, fmOpenRead or fmShareDenyNone);
+  try
+    // Создадим или перезапишем целевой файл
+    if FileExists(ADatabaseCopyPath) then
+      ToFile := TFileStream.Create(ADatabaseCopyPath, fmOpenReadWrite or fmShareDenyWrite)
+    else
+      ToFile := TFileStream.Create(ADatabaseCopyPath, fmCreate);
+    try
+      CopiedSize := 0;
+      ToFile.Size := FileSize;
+      ToFile.Position := 0;
+      FromFile.Position := 0;
+
+
+      NumRead := FromFile.Read(Buffer[0], BUFFER_SIZE);
+      while NumRead > 0 do
+      begin
+        CopiedSize := CopiedSize + NumRead;
+
+        NumRead := FromFile.Read(Buffer[0], BUFFER_SIZE);
+
+      end;
+
+    finally
+      FreeAndNil(ToFile);
+    end;
+  finally
+    FreeAndNil(FromFile);
+  end;
+end;
 
 end.
