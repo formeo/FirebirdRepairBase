@@ -3,8 +3,8 @@ unit main;
 interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, FileCtrl,ComCtrls,struck, DB, dxmdaset, ExtCtrls,
-  Menus, dxExEdtr, dxDBCtrl, dxDBGrid, dxTL, dxCntner,uCommon;
+  Dialogs, StdCtrls, FileCtrl, ComCtrls,struck, DB, ExtCtrls,
+  Menus, uCommon,uDatabase, XPMan;
 const
   MAX_PAGE_SIZE = 32768;
   MIN_PAGE_SIZE = 1024;
@@ -126,26 +126,22 @@ TPointer_page =  record
 
 type
   TfrmMain = class(TForm)
-    dlgOpen1: TOpenDialog;
+    dlgOpenDB: TOpenDialog;
     lst2: TListBox;
     GroupBox1: TGroupBox;
-    lst4: TListBox;
-    dxMeMPAGES: TdxMemData;
-    dxMeMPAGESTYPE_PAGE: TStringField;
-    intgrfldMeMPAGESNEXT_PAGE: TIntegerField;
-    dxMeMPAGESNUM_PAGE: TStringField;
+    lstPages: TListBox;
     dlgSave1: TSaveDialog;
     pmSaveInfo: TPopupMenu;
     mniN1: TMenuItem;
     dsBaseStat: TDataSource;
     pnl1: TPanel;
     lbl7: TLabel;
-    lbl8: TLabel;
+    lbNameDB: TLabel;
     pm1: TPopupMenu;
     mniN2: TMenuItem;
     pbProcess: TProgressBar;
     pnl5: TPanel;
-    btn1: TButton;
+    btnOpen: TButton;
     btn2: TButton;
     btn3: TButton;
     btn7: TButton;
@@ -162,27 +158,22 @@ type
     grp2: TGroupBox;
     pnl4: TPanel;
     lbl2: TLabel;
-    edt1: TEdit;
-    btn5: TButton;
+    edtPageNumber: TEdit;
+    btnSeek: TButton;
     grp3: TGroupBox;
     lbl3: TLabel;
     lbl4: TLabel;
     lbl5: TLabel;
-    btn6: TButton;
+    btnReWrite: TButton;
     edt3: TEdit;
-    edt4: TEdit;
-    cbb1: TComboBox;
+    edtCheckSum: TEdit;
+    cbbTypePage: TComboBox;
     ts2: TTabSheet;
     grp4: TGroupBox;
     lbl6: TLabel;
     btn4: TButton;
     edt2: TEdit;
     ts3: TTabSheet;
-    dxGRD1: TdxDBGrid;
-    dxdbgrdmskclmnDBGrid1NUM_PAGE: TdxDBGridMaskColumn;
-    dxdbgrdclmnDBGrid1RecId: TdxDBGridColumn;
-    dxdbgrdmskclmnDBGrid1TYPE_PAGE: TdxDBGridMaskColumn;
-    dxdbgrdmskclmnDBGrid1NEXT_PAGE: TdxDBGridMaskColumn;
     btnGetData: TButton;
     pmSaveLog: TPopupMenu;
     btnPIP: TButton;
@@ -193,12 +184,14 @@ type
     pnl10: TPanel;
     pnl11: TPanel;
     pbData: TProgressBar;
-    procedure btn1Click(Sender: TObject);
+    btnClearDB: TButton;
+    xpmfMain: TXPManifest;
+    procedure btnOpenClick(Sender: TObject);
     procedure btn2Click(Sender: TObject);
     procedure btn3Click(Sender: TObject);
     procedure mniN1Click(Sender: TObject);
-    procedure btn5Click(Sender: TObject);
-    procedure btn6Click(Sender: TObject);
+    procedure btnSeekClick(Sender: TObject);
+    procedure btnReWriteClick(Sender: TObject);
     procedure btn7Click(Sender: TObject);
     procedure btnGetDataClick(Sender: TObject);
     procedure btnPIPClick(Sender: TObject);
@@ -211,23 +204,21 @@ var
   frmMain: TfrmMain;
   new_header_page: THdrPage;
   page_size_curr: integer;
+  RDatabase: TFBDatabase;
 implementation
 
 {$R *.dfm}
 
 
-procedure TfrmMain.btn1Click(Sender: TObject);
+procedure TfrmMain.btnOpenClick(Sender: TObject);
 begin
-  if dlgOpen1.Execute then { Display Open dialog box }
+  if dlgOpenDB.Execute then
   begin
-    lbl8.Caption:=dlgOpen1.FileName;
+     RDatabase:= TFBDatabase.Create(dlgOpenDB.FileName);
+     lbNameDB.Caption:=RDatabase.NameDB;
+     btnOpen.Enabled:=False;
   end;
 end;
-
-
-
-
-
 
 procedure TfrmMain.btn2Click(Sender: TObject);
 var
@@ -247,29 +238,14 @@ var
    pages :tippage;
    DataPage:TDataPage;
 begin
-  if  dlgOpen1.FileName='' then begin Exit; end;
+  if not Assigned(RDatabase) then exit;
   lstLog.Items.Clear;
-  lstLog.Items.Add('База данных: '+dlgOpen1.FileName);
-  
-  FileSize := GetFileSizeBase(dlgOpen1.FileName);
-  lstLog.Items.Add('Размер файла Базы: '+IntToStr(FileSize));
-  try
-    FS := TFileStream.Create(dlgOpen1.FileName, fmOpenRead or fmShareDenyNone);
-    FS.Read(HeaderPage, MIN_PAGE_SIZE);
-  finally
-    FS.Free;
-  end;
-
-  page_size_curr:=HeaderPage.fix_data.hdr_page_size;
-  try
-    FS := TFileStream.Create(dlgOpen1.FileName, fmOpenRead or fmShareDenyNone);
-    FS.Read(HeaderPage, HeaderPage.fix_data.hdr_page_size);
-    lstLog.Items.Add('Количество страниц в базе '+floatToStr( Round(FileSize/HeaderPage.fix_data.hdr_page_size)));
-  finally
-    FS.Free;
-  end;
-  lstLog.Items.Add('Размер страницы базы '+inttostr(page_size_curr));
-  lstLog.Items.Add('Определение типов страниц ');
+  lstPages.Items.Clear;
+  lstLog.Items.Add('Data base: '+ RDatabase.NameDB);
+  lstLog.Items.Add('Database size: '+IntToStr(RDatabase.DBFileSize));
+  lstLog.Items.Add('Count Database Pages: '+floatToStr( Round(RDatabase.DBFileSize/RDatabase.Curr_page_size)));
+  lstLog.Items.Add('Database page size: '+inttostr(RDatabase.Curr_page_size));
+  lstLog.Items.Add('Type pages detecting: ');
   CountPIPPage:=0;
   CountTIPPage:=0;
   CountPointerPage:=0;
@@ -280,31 +256,29 @@ begin
   CountWriteAheadLogPage:=0;
   CountUnknownPage:=0;
   pbProcess.Min:=0;
-  pbProcess.Max:=round(FileSize/HeaderPage.fix_data.hdr_page_size);
+  pbProcess.Max:=round(FileSize/RDatabase.Curr_page_size);
   pbProcess.Position:=1;
   try
-    FS := TFileStream.Create(dlgOpen1.FileName, fmOpenRead or fmShareDenyNone);
-    NumRead := FS.Read(pages, page_size_curr);
+    FS := TFileStream.Create(RDatabase.NameDB, fmOpenRead or fmShareDenyNone);
+    NumRead := FS.Read(pages, RDatabase.Curr_page_size);
     i:=1;
     while (NumRead > 0) do
     begin
       NumRead := FS.Read(DataPage, page_size_curr);
       case DataPage.fix_data.pagHdr_Header.pag_type of
-       1:begin lst4.Items.Add(IntToStr(i)+' header page');   end;
-       2:begin lst4.Items.Add(IntToStr(i)+' Page Inventory Page (PIP)'); inc(CountPIPPage) end;
-       3:begin lst4.Items.Add(IntToStr(i)+' Page Inventory Page (TIP)'); inc(CountTIPPage);end;
-       4:begin lst4.Items.Add(IntToStr(i)+' Pointer Page '); inc(CountPointerPage)end;
-       5:begin lst4.Items.Add(IntToStr(i)+' Data Page '); inc(CountDataPage)end;
-       6:begin lst4.Items.Add(IntToStr(i)+' Index Root Page '); inc(CountIndexRootPage)end;
-       8:begin lst4.Items.Add(IntToStr(i)+' Blob Page '); inc(CountBlobPage)end;
-       9:begin lst4.Items.Add(IntToStr(i)+' Generator Page  '); inc(CountGeneratorPage)end;
-       10:begin lst4.Items.Add(IntToStr(i)+' Write Ahead Log page   '); inc(CountWriteAheadLogPage)end;
+       1:begin lstPages.Items.Add(IntToStr(i)+' Header page');   end;
+       2:begin lstPages.Items.Add(IntToStr(i)+' Page Inventory Page (PIP)'); inc(CountPIPPage) end;
+       3:begin lstPages.Items.Add(IntToStr(i)+' Page Inventory Page (TIP)'); inc(CountTIPPage);end;
+       4:begin lstPages.Items.Add(IntToStr(i)+' Pointer Page '); inc(CountPointerPage)end;
+       5:begin lstPages.Items.Add(IntToStr(i)+' Data Page '); inc(CountDataPage)end;
+       6:begin lstPages.Items.Add(IntToStr(i)+' Index Root Page '); inc(CountIndexRootPage)end;
+       8:begin lstPages.Items.Add(IntToStr(i)+' Blob Page '); inc(CountBlobPage)end;
+       9:begin lstPages.Items.Add(IntToStr(i)+' Generator Page  '); inc(CountGeneratorPage)end;
+       10:begin lstPages.Items.Add(IntToStr(i)+' Write Ahead Log page   '); inc(CountWriteAheadLogPage)end;
        else
        begin
           inc(CountUnknownPage);
        end
-
-
       end;
       inc(i);
       pbProcess.Position:=i;
@@ -312,16 +286,17 @@ begin
     end;
   finally
     FS.Free;
-  end;
-  lstLog.Items.Add('Количество Page Inventory Page (PIP) '+inttostr(CountPIPPage));
-  lstLog.Items.Add('Количество Page Inventory Page (TIP) '+inttostr(CountTIPPage));
-  lstLog.Items.Add('Количество Pointer Page '+inttostr(CountPointerPage));
-  lstLog.Items.Add('Количество Data Page '+inttostr(CountDataPage));
-  lstLog.Items.Add('Количество Index Root Page '+inttostr(CountIndexRootPage));
-  lstLog.Items.Add('Количество Blob Page '+inttostr(CountBlobPage));
-  lstLog.Items.Add('Количество Generator Page '+inttostr(CountGeneratorPage));
-  lstLog.Items.Add('Количество Write Ahead Log page '+inttostr(CountWriteAheadLogPage));
-  lstLog.Items.Add('Количество Неизвестных страниц '+inttostr(CountUnknownPage));
+  end;           
+
+  lstLog.Items.Add('Count Page Inventory Pages (PIP) '+inttostr(CountPIPPage));
+  lstLog.Items.Add('Count Page Inventory Pages (TIP) '+inttostr(CountTIPPage));
+  lstLog.Items.Add('Count Pointer Page '+inttostr(CountPointerPage));
+  lstLog.Items.Add('Count Data Pages '+inttostr(CountDataPage));
+  lstLog.Items.Add('Count Index Root Pages '+inttostr(CountIndexRootPage));
+  lstLog.Items.Add('Count Blob Pages '+inttostr(CountBlobPage));
+  lstLog.Items.Add('Count Generator Pages '+inttostr(CountGeneratorPage));
+  lstLog.Items.Add('Count Write Ahead Log Pages '+inttostr(CountWriteAheadLogPage));
+  lstLog.Items.Add('Count Unknown Pages '+inttostr(CountUnknownPage));
 end;
 
 procedure TfrmMain.btn3Click(Sender: TObject);
@@ -333,9 +308,9 @@ var
   db:Integer;
   orig_link_name  : array[0..257] of char;
 begin
-  if dlgOpen1.Execute then { Display Open dialog box }
+  if dlgOpenDB.Execute then { Display Open dialog box }
 begin
-  db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
+  db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
   i := FileRead(db, HeaderPage, MIN_PAGE_SIZE);
 
   fileseek(db, 0, 0);
@@ -443,36 +418,22 @@ begin
   if dlgSave1.Execute then lstLog.Items.SaveToFile(dlgSave1.FileName );
 end;
 
-procedure TfrmMain.btn5Click(Sender: TObject);
-var db,i:integer;
-    DataPage:TDataPage;
+procedure TfrmMain.btnSeekClick(Sender: TObject);
+var TypePage:integer;
 begin
-  try
-    db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
-    fileseek(db, 0, 0);
-   // fileseek(db, strtoint(edt1.text)*page_size_curr, 0);
-    fileseek(db, strtoint(edt1.text)*8192, 0);
-    //i := fileread(db, DataPage, page_size_curr);
-    i := fileread(db, DataPage, 8192);
-
-    if DataPage.fix_data.pagHdr_Header.pag_type < 0 then cbb1.Text:='Неизвестно'
-    else
-     cbb1.ItemIndex:=DataPage.fix_data.pagHdr_Header.pag_type-1;
-    edt4.Text:= inttostr(DataPage.fix_data.pagHdr_Header.pag_checksum);
-  finally
-    FileClose(db );
-  end
-
-  
+  TypePage:=  RDatabase.typeCurrPage(StrToIntDef(edtPageNumber.text,0));
+  if TypePage<0 then  cbbTypePage.Text:='Unknown' else  cbbTypePage.ItemIndex:=TypePage-1;
+  edtCheckSum.Text:= IntToStr(RDatabase.typeCutypePageChecksumrrPage(StrToIntDef(edtPageNumber.text,0)));
 end;
 
-procedure TfrmMain.btn6Click(Sender: TObject);
+procedure TfrmMain.btnReWriteClick(Sender: TObject);
 var db,i:integer;
     DataPage:TDataPage;
 
 begin
+  //ReWriting page
   page_size_curr:=8192;
-  db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
+  db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
   fileseek(db, 0, 0);
   fileseek(db, 1414484560*page_size_curr, 0);
   i := fileread(db, DataPage, page_size_curr);
@@ -480,10 +441,9 @@ begin
   ShowMessage(inttostr(DataPage.fix_data.pagHdr_Header.pag_type) );
   DataPage.fix_data.pagHdr_Header.pag_type:= 0;
 
- // DataPage.fix_data.pagHdr_Header.pag_type:=cbb1.ItemIndex;
- // DataPage.fix_data.pagHdr_Header.pag_type:=12;
+ 
 
-  db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
+  db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
   fileseek(db, 0, 0);
   fileseek(db, 1414484560*page_size_curr, 0);
   i := filewrite(db, DataPage, page_size_curr);
@@ -496,7 +456,7 @@ var        db,i:Integer;
 pages :tippage;
   newpages :tippage;
 begin
-  db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
+  db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
   fileseek(db, 0, 0);
   fileseek(db, 148*8192, 0);
   i := fileread(db, pages, 8192);
@@ -512,9 +472,9 @@ procedure TfrmMain.btnGetDataClick(Sender: TObject);
 var i,db,pCurrSize :Integer;
     DataData:TDataPage;
 begin
-   pCurrSize:=getCurrPageSize(dlgOpen1.FileName);
+   pCurrSize:=getCurrPageSize(dlgOpenDB.FileName);
    try
-     db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
+     db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
      fileseek(db, 0, 0);
      fileseek(db, 745754*pCurrSize, 0);
      i := fileread(db, DataData,pCurrSize);
@@ -547,16 +507,16 @@ var   FS  :TFileStream;
       DataData2:Trhd_page;
 begin
    firstPointerPage:=-1;
-   pCurrSize:=getCurrPageSize(dlgOpen1.FileName);
+   pCurrSize:=getCurrPageSize(dlgOpenDB.FileName);
    try
-     FS := TFileStream.Create(dlgOpen1.FileName, fmOpenRead or fmShareDenyNone);
+     FS := TFileStream.Create(dlgOpenDB.FileName, fmOpenRead or fmShareDenyNone);
      FS.Read(HeaderPage, pCurrSize);
    finally
      FS.Free;
    end;
    firstPointerPage:= HeaderPage.fix_data.hdr_pages;
    try
-     db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
+     db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
      fileseek(db, 0, 0);
      fileseek(db, firstPointerPage*pCurrSize, 0);
      i := fileread(db, pPage, pCurrSize);
@@ -568,7 +528,7 @@ begin
    lstLog.Items.Add('RDB$PAGES состоит из  '+inttostr(pPage.fix_data.ppg_count) + ' страниц' );
 
    try
-     db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
+     db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
      fileseek(db, 0, 0);
      fileseek(db, (5*pCurrSize), 0);
      i := fileread(db, DataData, pCurrSize);
@@ -577,7 +537,7 @@ begin
    end;
 
    try
-     db := fileopen(dlgOpen1.FileName, fmOpenReadWrite + fmShareExclusive);
+     db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
      fileseek(db, 0, 0);
      fileseek(db, (1878*pCurrSize)+4524, 0);
      i := fileread(db, DataData2, 28);

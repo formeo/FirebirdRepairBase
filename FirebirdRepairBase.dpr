@@ -4,7 +4,10 @@ uses
   Forms,
   main in 'main.pas' {frmMain},
   struck in 'struck.pas',
-  uCommon in 'uCommon.pas';
+  uCommon in 'uCommon.pas',
+  uDatabase in 'uDatabase.pas',
+  uHeaderPage in 'uHeaderPage.pas',
+  uPag in 'uPag.pas';
 
 {$R *.res}
 

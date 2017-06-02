@@ -1,9 +1,9 @@
 object frmMain: TfrmMain
-  Left = 225
-  Top = 139
+  Left = 260
+  Top = 201
   Width = 1437
   Height = 846
-  Caption = #1056#1077#1072#1085#1080#1084#1072#1090#1086#1088' '#1073#1072#1079' '#1076#1072#1085#1085#1099#1093
+  Caption = 'Repare Firebird DB'
   Color = clBtnFace
   Font.Charset = RUSSIAN_CHARSET
   Font.Color = clWindowText
@@ -5074,25 +5074,25 @@ object frmMain: TfrmMain
   PixelsPerInch = 96
   TextHeight = 13
   object lst2: TListBox
-    Left = 1120
-    Top = 376
+    Left = 1312
+    Top = 368
     Width = 97
     Height = 329
     ItemHeight = 13
     TabOrder = 0
   end
   object GroupBox1: TGroupBox
-    Left = 1192
-    Top = 152
-    Width = 153
-    Height = 273
+    Left = 888
+    Top = 104
+    Width = 417
+    Height = 481
     Caption = #1057#1090#1088#1072#1085#1080#1094#1099' '#1073#1072#1079#1099' '#1076#1072#1085#1085#1099#1093
     TabOrder = 1
-    object lst4: TListBox
+    object lstPages: TListBox
       Left = 2
       Top = 15
-      Width = 149
-      Height = 256
+      Width = 413
+      Height = 464
       Align = alClient
       ItemHeight = 13
       TabOrder = 0
@@ -5101,7 +5101,7 @@ object frmMain: TfrmMain
   object pnl1: TPanel
     Left = 0
     Top = 41
-    Width = 1429
+    Width = 1421
     Height = 57
     Align = alTop
     TabOrder = 2
@@ -5118,7 +5118,7 @@ object frmMain: TfrmMain
       Font.Style = [fsBold]
       ParentFont = False
     end
-    object lbl8: TLabel
+    object lbNameDB: TLabel
       Left = 8
       Top = 28
       Width = 47
@@ -5134,30 +5134,28 @@ object frmMain: TfrmMain
   end
   object pbProcess: TProgressBar
     Left = 0
-    Top = 801
-    Width = 1429
+    Top = 789
+    Width = 1421
     Height = 18
     Align = alBottom
-    Min = 0
-    Max = 100
     Smooth = True
     TabOrder = 3
   end
   object pnl5: TPanel
     Left = 0
     Top = 0
-    Width = 1429
+    Width = 1421
     Height = 41
     Align = alTop
     TabOrder = 4
-    object btn1: TButton
+    object btnOpen: TButton
       Left = 8
       Top = 8
       Width = 75
       Height = 25
       Caption = 'OpenDB'
       TabOrder = 0
-      OnClick = btn1Click
+      OnClick = btnOpenClick
     end
     object btn2: TButton
       Left = 88
@@ -5204,12 +5202,20 @@ object frmMain: TfrmMain
       TabOrder = 5
       OnClick = btnPIPClick
     end
+    object btnClearDB: TButton
+      Left = 488
+      Top = 8
+      Width = 75
+      Height = 25
+      Caption = 'ReleaceDB'
+      TabOrder = 6
+    end
   end
   object pnl6: TPanel
     Left = 0
     Top = 98
     Width = 497
-    Height = 703
+    Height = 691
     Align = alLeft
     TabOrder = 5
     object grp1: TGroupBox
@@ -5218,7 +5224,7 @@ object frmMain: TfrmMain
       Width = 495
       Height = 257
       Align = alTop
-      Caption = #1051#1086#1075' '#1087#1088#1086#1094#1077#1089#1089#1072
+      Caption = 'Process:'
       TabOrder = 0
       object spl1: TSplitter
         Left = 2
@@ -5275,8 +5281,6 @@ object frmMain: TfrmMain
           Width = 471
           Height = 16
           Anchors = [akLeft, akRight, akBottom]
-          Min = 0
-          Max = 100
           Smooth = True
           TabOrder = 0
         end
@@ -5289,7 +5293,6 @@ object frmMain: TfrmMain
       Height = 345
       ActivePage = ts1
       Align = alTop
-      TabIndex = 0
       TabOrder = 1
       object ts1: TTabSheet
         Caption = #1056#1072#1073#1086#1090#1072' '#1089#1086' '#1089#1090#1088#1072#1085#1080#1094#1072#1084#1080
@@ -5311,9 +5314,9 @@ object frmMain: TfrmMain
             object lbl2: TLabel
               Left = 8
               Top = 8
-              Width = 153
+              Width = 156
               Height = 13
-              Caption = #1042#1074#1077#1076#1080#1090#1077' '#1085#1086#1084#1077#1088' '#1089#1090#1088#1072#1085#1080#1094#1099':'
+              Caption = 'Please Entrer page number:'
               Font.Charset = RUSSIAN_CHARSET
               Font.Color = clWindowText
               Font.Height = -11
@@ -5321,21 +5324,21 @@ object frmMain: TfrmMain
               Font.Style = [fsBold]
               ParentFont = False
             end
-            object edt1: TEdit
+            object edtPageNumber: TEdit
               Left = 8
               Top = 28
               Width = 153
               Height = 21
               TabOrder = 0
             end
-            object btn5: TButton
+            object btnSeek: TButton
               Left = 174
               Top = 24
               Width = 75
               Height = 25
               Caption = #1055#1086#1080#1089#1082
               TabOrder = 1
-              OnClick = btn5Click
+              OnClick = btnSeekClick
             end
           end
           object grp3: TGroupBox
@@ -5385,14 +5388,14 @@ object frmMain: TfrmMain
               Font.Style = [fsBold]
               ParentFont = False
             end
-            object btn6: TButton
+            object btnReWrite: TButton
               Left = 352
               Top = 208
               Width = 89
               Height = 25
               Caption = #1055#1077#1088#1077#1079#1072#1087#1080#1089#1072#1090#1100
               TabOrder = 0
-              OnClick = btn6Click
+              OnClick = btnReWriteClick
             end
             object edt3: TEdit
               Left = 192
@@ -5401,14 +5404,14 @@ object frmMain: TfrmMain
               Height = 21
               TabOrder = 1
             end
-            object edt4: TEdit
+            object edtCheckSum: TEdit
               Left = 8
               Top = 80
               Width = 145
               Height = 21
               TabOrder = 2
             end
-            object cbb1: TComboBox
+            object cbbTypePage: TComboBox
               Left = 8
               Top = 40
               Width = 145
@@ -5475,47 +5478,6 @@ object frmMain: TfrmMain
       object ts3: TTabSheet
         Caption = #1057#1090#1072#1090#1080#1089#1090#1080#1082#1072' '#1087#1086' '#1073#1072#1079#1077' '#1076#1072#1085#1085#1099#1093
         ImageIndex = 2
-        object dxGRD1: TdxDBGrid
-          Left = 0
-          Top = 0
-          Width = 487
-          Height = 317
-          Bands = <
-            item
-            end>
-          DefaultLayout = True
-          HeaderPanelRowCount = 1
-          SummaryGroups = <>
-          SummarySeparator = ', '
-          Align = alClient
-          TabOrder = 0
-          DataSource = dsBaseStat
-          Filter.Criteria = {00000000}
-          object dxdbgrdmskclmnDBGrid1NUM_PAGE: TdxDBGridMaskColumn
-            Caption = #1053#1086#1084#1077#1088' '#1089#1090#1088#1072#1085#1080#1094#1099
-            BandIndex = 0
-            RowIndex = 0
-            FieldName = 'NUM_PAGE'
-          end
-          object dxdbgrdclmnDBGrid1RecId: TdxDBGridColumn
-            Visible = False
-            BandIndex = 0
-            RowIndex = 0
-            FieldName = 'RecId'
-          end
-          object dxdbgrdmskclmnDBGrid1TYPE_PAGE: TdxDBGridMaskColumn
-            Caption = #1058#1080#1087' '#1089#1090#1088#1072#1085#1080#1094#1099
-            BandIndex = 0
-            RowIndex = 0
-            FieldName = 'TYPE_PAGE'
-          end
-          object dxdbgrdmskclmnDBGrid1NEXT_PAGE: TdxDBGridMaskColumn
-            Caption = #1057#1083#1077#1076#1091#1102#1097#1072#1103' ('#1076#1083#1103' TIP)'
-            BandIndex = 0
-            RowIndex = 0
-            FieldName = 'NEXT_PAGE'
-          end
-        end
       end
     end
   end
@@ -5523,7 +5485,7 @@ object frmMain: TfrmMain
     Left = 497
     Top = 98
     Width = 384
-    Height = 703
+    Height = 691
     Align = alLeft
     TabOrder = 6
     object pnl8: TPanel
@@ -5554,8 +5516,6 @@ object frmMain: TfrmMain
           Width = 378
           Height = 15
           Align = alClient
-          Min = 0
-          Max = 100
           TabOrder = 0
         end
       end
@@ -5564,7 +5524,7 @@ object frmMain: TfrmMain
       Left = 1
       Top = 42
       Width = 382
-      Height = 660
+      Height = 648
       Align = alClient
       Caption = 'pnl9'
       TabOrder = 1
@@ -5572,32 +5532,17 @@ object frmMain: TfrmMain
         Left = 1
         Top = 1
         Width = 380
-        Height = 658
+        Height = 646
         Align = alClient
         ScrollBars = ssVertical
         TabOrder = 0
       end
     end
   end
-  object dlgOpen1: TOpenDialog
+  object dlgOpenDB: TOpenDialog
     Filter = #1060#1072#1081#1083' '#1073#1072#1079#1099' '#1076#1072#1085#1085#1099#1093'|*.fdb'
     Left = 88
     Top = 136
-  end
-  object dxMeMPAGES: TdxMemData
-    Indexes = <>
-    SortOptions = []
-    Left = 304
-    Top = 128
-    object dxMeMPAGESTYPE_PAGE: TStringField
-      FieldName = 'TYPE_PAGE'
-    end
-    object intgrfldMeMPAGESNEXT_PAGE: TIntegerField
-      FieldName = 'NEXT_PAGE'
-    end
-    object dxMeMPAGESNUM_PAGE: TStringField
-      FieldName = 'NUM_PAGE'
-    end
   end
   object dlgSave1: TSaveDialog
     Filter = #1048#1085#1092#1086#1088#1084#1072#1094#1080#1103' '#1086' '#1073#1072#1079#1077' '#1076#1072#1085#1085#1099#1093'|*.txt'
@@ -5613,13 +5558,12 @@ object frmMain: TfrmMain
     end
   end
   object dsBaseStat: TDataSource
-    DataSet = dxMeMPAGES
-    Left = 992
-    Top = 496
+    Left = 1000
+    Top = 648
   end
   object pm1: TPopupMenu
-    Left = 968
-    Top = 544
+    Left = 904
+    Top = 632
     object mniN2: TMenuItem
       Caption = #1057#1086#1093#1088#1072#1085#1080#1090#1100' '#1074' '#1092#1072#1081#1083
     end
@@ -5627,5 +5571,9 @@ object frmMain: TfrmMain
   object pmSaveLog: TPopupMenu
     Left = 344
     Top = 176
+  end
+  object xpmfMain: TXPManifest
+    Left = 1272
+    Top = 24
   end
 end
