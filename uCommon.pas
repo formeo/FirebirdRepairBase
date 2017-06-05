@@ -124,11 +124,122 @@ TPointer_page =  record
 function getCurrPageSize(const fileName: string):Integer;
 function ByteToHex(InByte:byte):shortstring;
 function GetFileSizeBase(const AFileName: String): Int64;
+function IntToBinLowByte(const Value: LongWord): string;
+function IntToBin1(Value: Longint; Digits: Integer): string;
+function IntToBin2(d: Longint): string;
+function Get_a_Bit(const aValue: Cardinal; const Bit: Byte): Boolean;
+function Set_a_Bit(const aValue: Cardinal; const Bit: Byte): Cardinal;
+function Clear_a_Bit(const aValue: Cardinal; const Bit: Byte): Cardinal;
+function BinToInt(BinStr : string) : Int64;
+function Hex2Byte(S : String):Byte;
+function Enable_a_Bit(const aValue: Cardinal; const Bit: Byte; const Flag: Boolean): Cardinal;
 procedure CopyDatabaseFile( ADatabaseOriginalPath: string; ADatabaseCopyPath: String);
 
 implementation
 
 
+//bits function for flags
+
+ //get if a particular bit is 1
+function Get_a_Bit(const aValue: Cardinal; const Bit: Byte): Boolean;
+begin
+  Result := (aValue and (1 shl Bit)) <> 0;
+end;
+ 
+//set a particular bit as 1
+function Set_a_Bit(const aValue: Cardinal; const Bit: Byte): Cardinal;
+begin
+  Result := aValue or (1 shl Bit);
+end;
+ 
+//set a particular bit as 0
+function Clear_a_Bit(const aValue: Cardinal; const Bit: Byte): Cardinal;
+begin
+  Result := aValue and not (1 shl Bit);
+end;
+ 
+//Enable o disable a bit
+function Enable_a_Bit(const aValue: Cardinal; const Bit: Byte; const Flag: Boolean): Cardinal;
+begin
+  Result := (aValue or (1 shl Bit)) xor (Integer(not Flag) shl Bit);
+end;
+
+function BinToInt(BinStr : string) : Int64;
+var i : byte;
+    RetVar : Int64;
+begin
+   BinStr := UpperCase(BinStr);
+   if BinStr[length(BinStr)] = 'B' then Delete(BinStr,length(BinStr),1);
+   RetVar := 0;
+   for i := 1 to length(BinStr) do begin
+     if not (BinStr[i] in ['0','1']) then begin
+        RetVar := 0;
+        Break;
+     end;
+     RetVar := (RetVar shl 1) + (byte(BinStr[i]) and 1) ;
+   end;
+   
+   Result := RetVar;
+end;
+
+ // Integer to Binary 
+
+function IntToBin1(Value: Longint; Digits: Integer): string;
+ var
+   i: Integer;
+ begin
+   Result := '';
+   for i := Digits downto 0 do
+     if Value and (1 shl i) <> 0 then
+       Result := Result + '1'
+   else
+     Result := Result + '0';
+ end;
+
+function Hex2Byte(S : String):Byte;
+const C:string[16]='0123456789ABCDEF';
+begin
+  if Length(S) < 2 then
+    Result := Pos(S, C) - 1
+  else
+    Result := (Pos(S[1], C) - 1)*16 + Pos(S[2], C) - 1
+end;
+
+
+
+ function IntToBin2(d: Longint): string;
+ var
+   x, p: Integer;
+   bin: string;
+ begin
+   bin := '';
+   for x := 1 to 8 * SizeOf(d) do
+   begin
+     if Odd(d) then bin := '1' + bin
+     else
+       bin := '0' + bin;
+     d := d shr 1;
+   end;
+   Delete(bin, 1, 8 * ((Pos('1', bin) - 1) div 8));
+   Result := bin;
+ end;
+
+
+function IntToBinLowByte(const Value: LongWord): string;
+var
+  i: Integer;
+begin
+  SetLength(Result, 8);
+  for i := 1 to 8 do
+  begin
+    if ((Value shl (24+i-1)) shr 31) = 0 then
+    begin
+      Result[i] := '0'
+    end else begin
+      Result[i] := '1';
+    end;
+  end;
+end;
 
 function getCurrPageSize(const fileName: string):Integer;
 var fs: TFileStream;

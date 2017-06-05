@@ -1,8 +1,8 @@
 object frmMain: TfrmMain
-  Left = 260
-  Top = 201
-  Width = 1437
-  Height = 846
+  Left = 401
+  Top = 171
+  Width = 1130
+  Height = 803
   Caption = 'Repare Firebird DB'
   Color = clBtnFace
   Font.Charset = RUSSIAN_CHARSET
@@ -5071,40 +5071,20 @@ object frmMain: TfrmMain
     0000C0030000E0070000F0030000F0010000E0010000E1010000C3830000E7C7
     0000FFE70000}
   OldCreateOrder = False
+  OnClose = FormClose
+  OnShow = FormShow
+  DesignSize = (
+    1114
+    764)
   PixelsPerInch = 96
   TextHeight = 13
-  object lst2: TListBox
-    Left = 1312
-    Top = 368
-    Width = 97
-    Height = 329
-    ItemHeight = 13
-    TabOrder = 0
-  end
-  object GroupBox1: TGroupBox
-    Left = 888
-    Top = 104
-    Width = 417
-    Height = 481
-    Caption = #1057#1090#1088#1072#1085#1080#1094#1099' '#1073#1072#1079#1099' '#1076#1072#1085#1085#1099#1093
-    TabOrder = 1
-    object lstPages: TListBox
-      Left = 2
-      Top = 15
-      Width = 413
-      Height = 464
-      Align = alClient
-      ItemHeight = 13
-      TabOrder = 0
-    end
-  end
   object pnl1: TPanel
     Left = 0
     Top = 41
-    Width = 1421
+    Width = 1114
     Height = 57
     Align = alTop
-    TabOrder = 2
+    TabOrder = 0
     object lbl7: TLabel
       Left = 8
       Top = 6
@@ -5132,22 +5112,34 @@ object frmMain: TfrmMain
       ParentFont = False
     end
   end
-  object pbProcess: TProgressBar
-    Left = 0
-    Top = 789
-    Width = 1421
-    Height = 18
-    Align = alBottom
-    Smooth = True
-    TabOrder = 3
-  end
   object pnl5: TPanel
     Left = 0
     Top = 0
-    Width = 1421
+    Width = 1114
     Height = 41
     Align = alTop
-    TabOrder = 4
+    TabOrder = 1
+    object lbAll: TLabel
+      Left = 712
+      Top = 8
+      Width = 19
+      Height = 13
+      Caption = 'lbAll'
+    end
+    object lb1: TLabel
+      Left = 680
+      Top = 8
+      Width = 4
+      Height = 13
+      Caption = '\'
+    end
+    object lbCurr: TLabel
+      Left = 624
+      Top = 8
+      Width = 29
+      Height = 13
+      Caption = 'lbCurr'
+    end
     object btnOpen: TButton
       Left = 8
       Top = 8
@@ -5157,78 +5149,61 @@ object frmMain: TfrmMain
       TabOrder = 0
       OnClick = btnOpenClick
     end
-    object btn2: TButton
+    object btnCheck: TButton
       Left = 88
       Top = 8
       Width = 75
       Height = 25
       Caption = 'Check'
       TabOrder = 1
-      OnClick = btn2Click
+      OnClick = btnCheckClick
     end
-    object btn3: TButton
+    object btnGetData: TButton
       Left = 168
       Top = 8
       Width = 75
       Height = 25
-      Caption = 'btn3'
+      Caption = 'GetData'
       TabOrder = 2
-      OnClick = btn3Click
+      OnClick = btnGetDataClick
     end
-    object btn7: TButton
+    object btnPIP: TButton
       Left = 248
       Top = 8
       Width = 75
       Height = 25
-      Caption = 'btn7'
+      Caption = 'btnPIP'
       TabOrder = 3
-      OnClick = btn7Click
+      OnClick = btnPIPClick
     end
-    object btnGetData: TButton
+    object btnClearDB: TButton
       Left = 328
       Top = 8
       Width = 75
       Height = 25
-      Caption = 'GetData'
-      TabOrder = 4
-      OnClick = btnGetDataClick
-    end
-    object btnPIP: TButton
-      Left = 408
-      Top = 8
-      Width = 75
-      Height = 25
-      Caption = 'btnPIP'
-      TabOrder = 5
-      OnClick = btnPIPClick
-    end
-    object btnClearDB: TButton
-      Left = 488
-      Top = 8
-      Width = 75
-      Height = 25
       Caption = 'ReleaceDB'
-      TabOrder = 6
+      TabOrder = 4
+      OnClick = btnClearDBClick
     end
   end
   object pnl6: TPanel
     Left = 0
     Top = 98
     Width = 497
-    Height = 691
+    Height = 647
     Align = alLeft
-    TabOrder = 5
+    TabOrder = 2
     object grp1: TGroupBox
       Left = 1
       Top = 1
       Width = 495
-      Height = 257
+      Height = 304
       Align = alTop
       Caption = 'Process:'
       TabOrder = 0
       object spl1: TSplitter
         Left = 2
-        Top = 202
+        Top = 249
         Width = 491
         Height = 6
         Cursor = crVSplit
@@ -5238,14 +5213,14 @@ object frmMain: TfrmMain
         Left = 2
         Top = 15
         Width = 491
-        Height = 187
+        Height = 234
         Align = alClient
         TabOrder = 0
         object lstLog: TListBox
           Left = 1
           Top = 1
           Width = 489
-          Height = 185
+          Height = 232
           Align = alClient
           ItemHeight = 13
           PopupMenu = pmSaveInfo
@@ -5254,7 +5229,7 @@ object frmMain: TfrmMain
       end
       object pnl3: TPanel
         Left = 2
-        Top = 208
+        Top = 255
         Width = 491
         Height = 47
         Align = alBottom
@@ -5263,11 +5238,11 @@ object frmMain: TfrmMain
           491
           47)
         object lbl1: TLabel
-          Left = 8
+          Left = 0
           Top = 8
-          Width = 50
+          Width = 53
           Height = 13
-          Caption = 'process: '
+          Caption = 'Progress:'
           Font.Charset = RUSSIAN_CHARSET
           Font.Color = clWindowText
           Font.Height = -11
@@ -5276,9 +5251,9 @@ object frmMain: TfrmMain
           ParentFont = False
         end
         object pbDetectedPage: TProgressBar
-          Left = 8
+          Left = 0
           Top = 25
-          Width = 471
+          Width = 489
           Height = 16
           Anchors = [akLeft, akRight, akBottom]
           Smooth = True
@@ -5286,23 +5261,24 @@ object frmMain: TfrmMain
         end
       end
     end
-    object pgc1: TPageControl
+    object pgcServices: TPageControl
       Left = 1
-      Top = 258
+      Top = 309
       Width = 495
-      Height = 345
-      ActivePage = ts1
-      Align = alTop
+      Height = 337
+      ActivePage = tsWorkPages
+      Align = alBottom
+      Anchors = [akLeft, akTop, akRight, akBottom]
       TabOrder = 1
-      object ts1: TTabSheet
-        Caption = #1056#1072#1073#1086#1090#1072' '#1089#1086' '#1089#1090#1088#1072#1085#1080#1094#1072#1084#1080
+      OnChange = pgcServicesChange
+      object tsWorkPages: TTabSheet
+        Caption = 'Work with pages'
         object grp2: TGroupBox
           Left = 0
           Top = 0
           Width = 487
-          Height = 317
+          Height = 309
           Align = alClient
-          Caption = #1056#1072#1073#1086#1090#1072' '#1089#1086' '#1057#1090#1088#1072#1085#1080#1094#1072#1084#1080
           TabOrder = 0
           object pnl4: TPanel
             Left = 2
@@ -5327,16 +5303,22 @@ object frmMain: TfrmMain
             object edtPageNumber: TEdit
               Left = 8
               Top = 28
-              Width = 153
+              Width = 225
               Height = 21
               TabOrder = 0
             end
             object btnSeek: TButton
-              Left = 174
+              Left = 238
               Top = 24
               Width = 75
               Height = 25
-              Caption = #1055#1086#1080#1089#1082
+              Caption = 'Search'
+              Font.Charset = RUSSIAN_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -11
+              Font.Name = 'Tahoma'
+              Font.Style = [fsBold]
+              ParentFont = False
               TabOrder = 1
               OnClick = btnSeekClick
             end
@@ -5345,16 +5327,16 @@ object frmMain: TfrmMain
             Left = 2
             Top = 73
             Width = 483
-            Height = 242
+            Height = 234
             Align = alClient
             Caption = #1055#1086#1076#1088#1086#1073#1085#1072#1103' '#1080#1085#1092#1086#1088#1084#1072#1094#1080#1103
             TabOrder = 1
             object lbl3: TLabel
               Left = 8
               Top = 24
-              Width = 84
+              Width = 59
               Height = 13
-              Caption = #1058#1080#1087' '#1089#1090#1088#1072#1085#1080#1094#1099':'
+              Caption = 'Type page'
               Font.Charset = RUSSIAN_CHARSET
               Font.Color = clWindowText
               Font.Height = -11
@@ -5365,9 +5347,9 @@ object frmMain: TfrmMain
             object lbl4: TLabel
               Left = 8
               Top = 64
-              Width = 119
+              Width = 64
               Height = 13
-              Caption = #1050#1086#1085#1090#1088#1086#1083#1100#1085#1072#1103' '#1089#1091#1084#1084#1072':'
+              Caption = 'Check sum:'
               Font.Charset = RUSSIAN_CHARSET
               Font.Color = clWindowText
               Font.Height = -11
@@ -5376,7 +5358,7 @@ object frmMain: TfrmMain
               ParentFont = False
             end
             object lbl5: TLabel
-              Left = 192
+              Left = 280
               Top = 24
               Width = 185
               Height = 13
@@ -5389,18 +5371,24 @@ object frmMain: TfrmMain
               ParentFont = False
             end
             object btnReWrite: TButton
-              Left = 352
-              Top = 208
+              Left = 386
+              Top = 202
               Width = 89
               Height = 25
-              Caption = #1055#1077#1088#1077#1079#1072#1087#1080#1089#1072#1090#1100
+              Caption = 'ReWrite'
+              Font.Charset = RUSSIAN_CHARSET
+              Font.Color = clWindowText
+              Font.Height = -11
+              Font.Name = 'Tahoma'
+              Font.Style = [fsBold]
+              ParentFont = False
               TabOrder = 0
               OnClick = btnReWriteClick
             end
-            object edt3: TEdit
-              Left = 192
+            object edtNextTip: TEdit
+              Left = 280
               Top = 40
-              Width = 121
+              Width = 185
               Height = 21
               TabOrder = 1
             end
@@ -5410,15 +5398,16 @@ object frmMain: TfrmMain
               Width = 145
               Height = 21
               TabOrder = 2
+              Text = '12345'
             end
             object cbbTypePage: TComboBox
               Left = 8
               Top = 40
-              Width = 145
+              Width = 233
               Height = 21
+              Style = csDropDownList
               ItemHeight = 13
               TabOrder = 3
-              Text = #1053#1077#1080#1079#1074#1077#1089#1090#1085#1086
               Items.Strings = (
                 'HeaderPage'
                 'Page Inventory Page (PIP)'
@@ -5426,6 +5415,7 @@ object frmMain: TfrmMain
                 'Pointer Page'
                 'Data Page'
                 'Index Root Page'
+                'Index B-Tree Page'
                 'Blob Page'
                 'Generator Page  '
                 'Write Ahead Log page'
@@ -5435,22 +5425,31 @@ object frmMain: TfrmMain
         end
       end
       object ts2: TTabSheet
-        Caption = #1047#1072#1075#1086#1083#1086#1074#1086#1095#1085#1072#1103' '#1089#1090#1088#1072#1085#1080#1094#1072' '#1073#1072#1079#1099' '#1076#1072#1085#1085#1099#1093
+        Caption = 'Database Header Page'
+        Font.Charset = RUSSIAN_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = [fsBold]
         ImageIndex = 1
+        ParentFont = False
         object grp4: TGroupBox
           Left = 0
           Top = 0
           Width = 487
-          Height = 317
+          Height = 309
           Align = alClient
-          Caption = #1044#1072#1085#1085#1099#1077' '#1087#1086' '#1079#1072#1075#1086#1083#1086#1074#1086#1095#1085#1086#1081' '#1089#1090#1088#1072#1085#1080#1094#1077
+          Caption = 'Header page data:'
           TabOrder = 0
+          DesignSize = (
+            487
+            309)
           object lbl6: TLabel
             Left = 8
             Top = 24
-            Width = 38
+            Width = 32
             Height = 13
-            Caption = #1060#1083#1072#1075#1080':'
+            Caption = 'Flags:'
             Font.Charset = RUSSIAN_CHARSET
             Font.Color = clWindowText
             Font.Height = -11
@@ -5458,84 +5457,308 @@ object frmMain: TfrmMain
             Font.Style = [fsBold]
             ParentFont = False
           end
-          object btn4: TButton
-            Left = 368
-            Top = 280
+          object btnGetHeaderFlags: TButton
+            Left = 402
+            Top = 278
             Width = 75
             Height = 25
-            Caption = #1055#1086#1083#1091#1095#1080#1090#1100
+            Anchors = [akRight, akBottom]
+            Caption = 'Get'
             TabOrder = 0
+            OnClick = btnGetHeaderFlagsClick
           end
-          object edt2: TEdit
+          object edtFlags: TEdit
             Left = 8
             Top = 40
-            Width = 121
+            Width = 473
             Height = 21
+            Anchors = [akLeft, akTop, akRight]
+            Enabled = False
+            Font.Charset = RUSSIAN_CHARSET
+            Font.Color = clWindowText
+            Font.Height = -11
+            Font.Name = 'Tahoma'
+            Font.Style = []
+            ParentFont = False
+            ParentShowHint = False
+            ReadOnly = True
+            ShowHint = True
             TabOrder = 1
+          end
+          object lstDBFlags: TListBox
+            Left = 8
+            Top = 64
+            Width = 473
+            Height = 209
+            Anchors = [akLeft, akTop, akRight]
+            Font.Charset = RUSSIAN_CHARSET
+            Font.Color = clWindowText
+            Font.Height = -11
+            Font.Name = 'Tahoma'
+            Font.Style = []
+            ItemHeight = 13
+            ParentFont = False
+            TabOrder = 2
           end
         end
       end
-      object ts3: TTabSheet
-        Caption = #1057#1090#1072#1090#1080#1089#1090#1080#1082#1072' '#1087#1086' '#1073#1072#1079#1077' '#1076#1072#1085#1085#1099#1093
+      object tsFlags: TTabSheet
+        Caption = 'Set Flags'
         ImageIndex = 2
+        OnShow = tsFlagsShow
+        object chkSetFW: TCheckBox
+          Left = 8
+          Top = 16
+          Width = 193
+          Height = 17
+          Caption = 'Set Force Write'
+          Font.Charset = RUSSIAN_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Tahoma'
+          Font.Style = [fsBold]
+          ParentFont = False
+          TabOrder = 0
+        end
+        object chkReadOnly: TCheckBox
+          Left = 8
+          Top = 40
+          Width = 113
+          Height = 17
+          Caption = 'Set Read Olny'
+          Font.Charset = RUSSIAN_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Tahoma'
+          Font.Style = [fsBold]
+          ParentFont = False
+          TabOrder = 1
+        end
+        object btnWriteFlags: TButton
+          Left = 408
+          Top = 280
+          Width = 75
+          Height = 25
+          Caption = 'Write Flags'
+          Font.Charset = RUSSIAN_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Tahoma'
+          Font.Style = [fsBold]
+          ParentFont = False
+          TabOrder = 2
+          OnClick = btnWriteFlagsClick
+        end
+      end
+      object tsGenerateNewPage: TTabSheet
+        Caption = 'Generate new page'
+        ImageIndex = 3
+        object lb2: TLabel
+          Left = 8
+          Top = 16
+          Width = 31
+          Height = 13
+          Caption = 'Type:'
+          Font.Charset = RUSSIAN_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Tahoma'
+          Font.Style = [fsBold]
+          ParentFont = False
+        end
+        object Position: TLabel
+          Left = 8
+          Top = 56
+          Width = 48
+          Height = 13
+          Caption = 'Position:'
+          Font.Charset = RUSSIAN_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Tahoma'
+          Font.Style = [fsBold]
+          ParentFont = False
+        end
+        object btnGenerate: TButton
+          Left = 408
+          Top = 280
+          Width = 75
+          Height = 25
+          Caption = 'Generate'
+          TabOrder = 0
+          OnClick = btnGenerateClick
+        end
+        object cbbTypePageGen: TComboBox
+          Left = 8
+          Top = 32
+          Width = 337
+          Height = 21
+          Style = csDropDownList
+          ItemHeight = 13
+          TabOrder = 1
+          Items.Strings = (
+            'HeaderPage'
+            'Page Inventory Page (PIP)'
+            'Page Inventory Page (TIP)'
+            'Pointer Page'
+            'Data Page'
+            'Index Root Page'
+            'Index B-Tree Page'
+            'Blob Page'
+            'Generator Page  '
+            'Write Ahead Log page')
+        end
+        object edtPagePosition: TEdit
+          Left = 8
+          Top = 72
+          Width = 337
+          Height = 21
+          TabOrder = 2
+        end
       end
     end
   end
-  object pnl7: TPanel
-    Left = 497
-    Top = 98
-    Width = 384
-    Height = 691
-    Align = alLeft
+  object statDB: TStatusBar
+    Left = 0
+    Top = 745
+    Width = 1114
+    Height = 19
+    Panels = <
+      item
+        Width = 50
+      end
+      item
+        Width = 50
+      end
+      item
+        Width = 50
+      end>
+  end
+  object dGridPages: TDBGrid
+    Left = 504
+    Top = 104
+    Width = 609
+    Height = 297
+    Anchors = [akLeft, akTop, akRight, akBottom]
+    DataSource = dsDataPages
+    Options = [dgTitles, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgConfirmDelete, dgCancelOnExit]
+    TabOrder = 4
+    TitleFont.Charset = RUSSIAN_CHARSET
+    TitleFont.Color = clWindowText
+    TitleFont.Height = -11
+    TitleFont.Name = 'Tahoma'
+    TitleFont.Style = []
+    Columns = <
+      item
+        Expanded = False
+        FieldName = 'PageNumber'
+        Title.Font.Charset = RUSSIAN_CHARSET
+        Title.Font.Color = clWindowText
+        Title.Font.Height = -11
+        Title.Font.Name = 'Tahoma'
+        Title.Font.Style = [fsBold]
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'PageType'
+        Title.Font.Charset = RUSSIAN_CHARSET
+        Title.Font.Color = clWindowText
+        Title.Font.Height = -11
+        Title.Font.Name = 'Tahoma'
+        Title.Font.Style = [fsBold]
+        Width = 241
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'Type Page Number'
+        Title.Font.Charset = RUSSIAN_CHARSET
+        Title.Font.Color = clWindowText
+        Title.Font.Height = -11
+        Title.Font.Name = 'Tahoma'
+        Title.Font.Style = [fsBold]
+        Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'checksum'
+        Title.Caption = 'CheckSum'
+        Title.Font.Charset = RUSSIAN_CHARSET
+        Title.Font.Color = clWindowText
+        Title.Font.Height = -11
+        Title.Font.Name = 'Tahoma'
+        Title.Font.Style = [fsBold]
+        Visible = True
+      end>
+  end
+  object dNvgNav: TDBNavigator
+    Left = 664
+    Top = 408
+    Width = 225
+    Height = 25
+    DataSource = dsDataPages
+    VisibleButtons = [nbFirst, nbPrior, nbNext, nbLast, nbRefresh]
+    Anchors = [akLeft, akTop, akRight]
+    TabOrder = 5
+  end
+  object pgcPagesData: TPageControl
+    Left = 504
+    Top = 440
+    Width = 609
+    Height = 305
+    ActivePage = tsDataPage
+    Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 6
-    object pnl8: TPanel
-      Left = 1
-      Top = 1
-      Width = 382
-      Height = 41
-      Align = alTop
-      TabOrder = 0
-      object pnl10: TPanel
-        Left = 1
-        Top = 1
-        Width = 380
-        Height = 22
-        Align = alTop
+    object tsDataPage: TTabSheet
+      Caption = 'Data Page'
+      Font.Charset = RUSSIAN_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -11
+      Font.Name = 'Tahoma'
+      Font.Style = [fsBold]
+      ParentFont = False
+      DesignSize = (
+        601
+        277)
+      object lb3: TLabel
+        Left = 8
+        Top = 0
+        Width = 78
+        Height = 13
+        Caption = 'Page number:'
+      end
+      object edtNPage: TEdit
+        Left = 5
+        Top = 16
+        Width = 395
+        Height = 21
         TabOrder = 0
       end
-      object pnl11: TPanel
-        Left = 1
-        Top = 23
-        Width = 380
-        Height = 17
-        Align = alClient
+      object btnGotoPage: TButton
+        Left = 409
+        Top = 13
+        Width = 75
+        Height = 25
+        Caption = 'Search'
         TabOrder = 1
-        object pbData: TProgressBar
-          Left = 1
-          Top = 1
-          Width = 378
-          Height = 15
-          Align = alClient
-          TabOrder = 0
-        end
+        OnClick = btnGotoPageClick
       end
-    end
-    object pnl9: TPanel
-      Left = 1
-      Top = 42
-      Width = 382
-      Height = 648
-      Align = alClient
-      Caption = 'pnl9'
-      TabOrder = 1
       object mmoData: TMemo
-        Left = 1
-        Top = 1
-        Width = 380
-        Height = 646
-        Align = alClient
-        ScrollBars = ssVertical
-        TabOrder = 0
+        Left = 3
+        Top = 64
+        Width = 595
+        Height = 209
+        Anchors = [akLeft, akTop, akRight, akBottom]
+        TabOrder = 2
+      end
+      object pbDataProgress: TProgressBar
+        Left = 8
+        Top = 42
+        Width = 585
+        Height = 17
+        Anchors = [akLeft, akTop, akRight]
+        TabOrder = 3
       end
     end
   end
@@ -5557,17 +5780,6 @@ object frmMain: TfrmMain
       OnClick = mniN1Click
     end
   end
-  object dsBaseStat: TDataSource
-    Left = 1000
-    Top = 648
-  end
-  object pm1: TPopupMenu
-    Left = 904
-    Top = 632
-    object mniN2: TMenuItem
-      Caption = #1057#1086#1093#1088#1072#1085#1080#1090#1100' '#1074' '#1092#1072#1081#1083
-    end
-  end
   object pmSaveLog: TPopupMenu
     Left = 344
     Top = 176
@@ -5575,5 +5787,29 @@ object frmMain: TfrmMain
   object xpmfMain: TXPManifest
     Left = 1272
     Top = 24
+  end
+  object dsPages: TClientDataSet
+    Aggregates = <>
+    Params = <>
+    Left = 528
+    Top = 384
+    object fPageNumber: TLargeintField
+      FieldName = 'PageNumber'
+    end
+    object fPageType: TStringField
+      FieldName = 'PageType'
+      Size = 255
+    end
+    object fTypePageNumber: TSmallintField
+      FieldName = 'Type Page Number'
+    end
+    object fCheckSum: TIntegerField
+      FieldName = 'checksum'
+    end
+  end
+  object dsDataPages: TDataSource
+    DataSet = dsPages
+    Left = 568
+    Top = 392
   end
 end

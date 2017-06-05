@@ -4,7 +4,8 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, FileCtrl, ComCtrls,struck, DB, ExtCtrls,
-  Menus, uCommon,uDatabase, XPMan;
+  Menus, uCommon,uDatabase, XPMan,uDataPage, Grids, DBGrids, DBClient,
+  DBCtrls;
 const
   MAX_PAGE_SIZE = 32768;
   MIN_PAGE_SIZE = 1024;
@@ -77,7 +78,7 @@ const
   end;
    PDpg_repeat = ^TDpg_rpt;
 
-
+  {
  TDpg_rpt = record
  dpg_offset : Word;
  dpg_length : Word;
@@ -94,7 +95,7 @@ TDataPage = record
  fix_data: TData_Page;
  dpg_repeat : array[0..(MAX_PAGE_SIZE-sizeof(TData_Page))] of TDpg_rpt;
 end;
-
+ }
 trhd1 = record
     rhd_transaction: SLONG ;
     rhd_b_page:  SLONG ;
@@ -102,6 +103,8 @@ trhd1 = record
     rhd_flags:  USHORT ;
     rhd_format:  UCHAR ;
   end ;
+
+
    Trhd_page  = record
     fix_data: trhd1;
     rhd_data:array[0..(MAX_PAGE_SIZE-sizeof(trhd1))] of UCHAR;
@@ -127,24 +130,15 @@ TPointer_page =  record
 type
   TfrmMain = class(TForm)
     dlgOpenDB: TOpenDialog;
-    lst2: TListBox;
-    GroupBox1: TGroupBox;
-    lstPages: TListBox;
     dlgSave1: TSaveDialog;
     pmSaveInfo: TPopupMenu;
     mniN1: TMenuItem;
-    dsBaseStat: TDataSource;
     pnl1: TPanel;
     lbl7: TLabel;
     lbNameDB: TLabel;
-    pm1: TPopupMenu;
-    mniN2: TMenuItem;
-    pbProcess: TProgressBar;
     pnl5: TPanel;
     btnOpen: TButton;
-    btn2: TButton;
-    btn3: TButton;
-    btn7: TButton;
+    btnCheck: TButton;
     pnl6: TPanel;
     grp1: TGroupBox;
     spl1: TSplitter;
@@ -153,8 +147,8 @@ type
     pnl3: TPanel;
     lbl1: TLabel;
     pbDetectedPage: TProgressBar;
-    pgc1: TPageControl;
-    ts1: TTabSheet;
+    pgcServices: TPageControl;
+    tsWorkPages: TTabSheet;
     grp2: TGroupBox;
     pnl4: TPanel;
     lbl2: TLabel;
@@ -165,38 +159,69 @@ type
     lbl4: TLabel;
     lbl5: TLabel;
     btnReWrite: TButton;
-    edt3: TEdit;
+    edtNextTip: TEdit;
     edtCheckSum: TEdit;
     cbbTypePage: TComboBox;
     ts2: TTabSheet;
     grp4: TGroupBox;
     lbl6: TLabel;
-    btn4: TButton;
-    edt2: TEdit;
-    ts3: TTabSheet;
+    btnGetHeaderFlags: TButton;
+    edtFlags: TEdit;
+    tsFlags: TTabSheet;
     btnGetData: TButton;
     pmSaveLog: TPopupMenu;
     btnPIP: TButton;
-    pnl7: TPanel;
-    pnl8: TPanel;
-    pnl9: TPanel;
-    mmoData: TMemo;
-    pnl10: TPanel;
-    pnl11: TPanel;
-    pbData: TProgressBar;
     btnClearDB: TButton;
     xpmfMain: TXPManifest;
+    lbAll: TLabel;
+    lb1: TLabel;
+    lbCurr: TLabel;
+    lstDBFlags: TListBox;
+    tsGenerateNewPage: TTabSheet;
+    btnGenerate: TButton;
+    lb2: TLabel;
+    Position: TLabel;
+    cbbTypePageGen: TComboBox;
+    edtPagePosition: TEdit;
+    chkSetFW: TCheckBox;
+    chkReadOnly: TCheckBox;
+    statDB: TStatusBar;
+    dsPages: TClientDataSet;
+    fPageNumber: TLargeintField;
+    fPageType: TStringField;
+    dsDataPages: TDataSource;
+    dGridPages: TDBGrid;
+    fTypePageNumber: TSmallintField;
+    btnWriteFlags: TButton;
+    dNvgNav: TDBNavigator;
+    fCheckSum: TIntegerField;
+    pgcPagesData: TPageControl;
+    tsDataPage: TTabSheet;
+    edtNPage: TEdit;
+    btnGotoPage: TButton;
+    mmoData: TMemo;
+    lb3: TLabel;
+    pbDataProgress: TProgressBar;
     procedure btnOpenClick(Sender: TObject);
-    procedure btn2Click(Sender: TObject);
-    procedure btn3Click(Sender: TObject);
+    procedure btnCheckClick(Sender: TObject);
     procedure mniN1Click(Sender: TObject);
     procedure btnSeekClick(Sender: TObject);
     procedure btnReWriteClick(Sender: TObject);
-    procedure btn7Click(Sender: TObject);
     procedure btnGetDataClick(Sender: TObject);
     procedure btnPIPClick(Sender: TObject);
+    procedure btnClearDBClick(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure btnGetHeaderFlagsClick(Sender: TObject);
+    procedure FormShow(Sender: TObject);
+    procedure btnWriteFlagsClick(Sender: TObject);
+    procedure tsFlagsShow(Sender: TObject);
+    procedure pgcServicesChange(Sender: TObject);
+    procedure btnGenerateClick(Sender: TObject);
+    procedure btnGotoPageClick(Sender: TObject);
+
   private
     { Private declarations }
+    procedure clearUserGui;
   public
   end;
 
@@ -206,6 +231,8 @@ var
   page_size_curr: integer;
   RDatabase: TFBDatabase;
 implementation
+
+uses uPag;
 
 {$R *.dfm}
 
@@ -217,10 +244,11 @@ begin
      RDatabase:= TFBDatabase.Create(dlgOpenDB.FileName);
      lbNameDB.Caption:=RDatabase.NameDB;
      btnOpen.Enabled:=False;
+
   end;
 end;
 
-procedure TfrmMain.btn2Click(Sender: TObject);
+procedure TfrmMain.btnCheckClick(Sender: TObject);
 var
    FS: TFileStream;
    FileSize :Int64;
@@ -240,10 +268,13 @@ var
 begin
   if not Assigned(RDatabase) then exit;
   lstLog.Items.Clear;
-  lstPages.Items.Clear;
+  dsPages.Close;
   lstLog.Items.Add('Data base: '+ RDatabase.NameDB);
   lstLog.Items.Add('Database size: '+IntToStr(RDatabase.DBFileSize));
+  if RDatabase.Curr_page_size = 0 then Application.MessageBox('Database page size is 0. ERROR!','Wrong page size',MB_OK+MB_ICONERROR);
   lstLog.Items.Add('Count Database Pages: '+floatToStr( Round(RDatabase.DBFileSize/RDatabase.Curr_page_size)));
+  lbAll.Caption:=floatToStr( Round(RDatabase.DBFileSize/RDatabase.Curr_page_size));
+  lbCurr.Caption:='0';
   lstLog.Items.Add('Database page size: '+inttostr(RDatabase.Curr_page_size));
   lstLog.Items.Add('Type pages detecting: ');
   CountPIPPage:=0;
@@ -255,39 +286,36 @@ begin
   CountGeneratorPage:=0;
   CountWriteAheadLogPage:=0;
   CountUnknownPage:=0;
-  pbProcess.Min:=0;
-  pbProcess.Max:=round(FileSize/RDatabase.Curr_page_size);
-  pbProcess.Position:=1;
-  try
-    FS := TFileStream.Create(RDatabase.NameDB, fmOpenRead or fmShareDenyNone);
-    NumRead := FS.Read(pages, RDatabase.Curr_page_size);
-    i:=1;
-    while (NumRead > 0) do
-    begin
-      NumRead := FS.Read(DataPage, page_size_curr);
-      case DataPage.fix_data.pagHdr_Header.pag_type of
-       1:begin lstPages.Items.Add(IntToStr(i)+' Header page');   end;
-       2:begin lstPages.Items.Add(IntToStr(i)+' Page Inventory Page (PIP)'); inc(CountPIPPage) end;
-       3:begin lstPages.Items.Add(IntToStr(i)+' Page Inventory Page (TIP)'); inc(CountTIPPage);end;
-       4:begin lstPages.Items.Add(IntToStr(i)+' Pointer Page '); inc(CountPointerPage)end;
-       5:begin lstPages.Items.Add(IntToStr(i)+' Data Page '); inc(CountDataPage)end;
-       6:begin lstPages.Items.Add(IntToStr(i)+' Index Root Page '); inc(CountIndexRootPage)end;
-       8:begin lstPages.Items.Add(IntToStr(i)+' Blob Page '); inc(CountBlobPage)end;
-       9:begin lstPages.Items.Add(IntToStr(i)+' Generator Page  '); inc(CountGeneratorPage)end;
-       10:begin lstPages.Items.Add(IntToStr(i)+' Write Ahead Log page   '); inc(CountWriteAheadLogPage)end;
+  pbDetectedPage.Min:=0;
+  pbDetectedPage.Max:=round(RDatabase.DBFileSize/RDatabase.Curr_page_size);
+  pbDetectedPage.Position:=1;
+  dsPages.CreateDataSet;
+  i:=1;
+  while not RDatabase.EmptyDataPage
+  do
+  begin
+    DataPage:= RDatabase.GetNextDataPage;
+    case DataPage.fix_data.pagHdr_Header.pag_type of
+       1:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Header page';dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post;  end;
+       2:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Page Inventory Page (PIP)'; inc(CountPIPPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
+       3:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Page Inventory Page (TIP)'; inc(CountTIPPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
+       4:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Pointer Page'; inc(CountPointerPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
+       5:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Data Page'; inc(CountDataPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
+       6:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Index Root Page'; inc(CountIndexRootPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
+       7:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Index B-Tree Page'; inc(CountBlobPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
+       8:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Blob Page'; inc(CountBlobPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
+       9:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Generator Page'; inc(CountGeneratorPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
+       10:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Write Ahead Log page'; inc(CountWriteAheadLogPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type; dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post;  end;
        else
        begin
-          inc(CountUnknownPage);
+          dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Unknown page'; inc(CountUnknownPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type; dsPages.Post;
        end
       end;
       inc(i);
-      pbProcess.Position:=i;
+      lbCurr.Caption:=IntToStr(i);
+      pbDetectedPage.Position:=i;
       Application.ProcessMessages;
-    end;
-  finally
-    FS.Free;
-  end;           
-
+  end;   
   lstLog.Items.Add('Count Page Inventory Pages (PIP) '+inttostr(CountPIPPage));
   lstLog.Items.Add('Count Page Inventory Pages (TIP) '+inttostr(CountTIPPage));
   lstLog.Items.Add('Count Pointer Page '+inttostr(CountPointerPage));
@@ -299,120 +327,6 @@ begin
   lstLog.Items.Add('Count Unknown Pages '+inttostr(CountUnknownPage));
 end;
 
-procedure TfrmMain.btn3Click(Sender: TObject);
-var
-  src_i, dst_i, len, found:integer;
-  is_win32:integer;
-  i:integer;
-  HeaderPage: THdrPage;
-  db:Integer;
-  orig_link_name  : array[0..257] of char;
-begin
-  if dlgOpenDB.Execute then { Display Open dialog box }
-begin
-  db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
-  i := FileRead(db, HeaderPage, MIN_PAGE_SIZE);
-
-  fileseek(db, 0, 0);
-
-  i := fileread(db, HeaderPage, HeaderPage.fix_data.hdr_page_size);
-
-
-  new_header_page.fix_data := HeaderPage.fix_data;
-  new_header_page.fix_data.hdr_flags:=256;
-  new_header_page.var_data:= HeaderPage.var_data;
-
-  fileseek(db, 0, 0);
-
-
-  i := filewrite(db, new_header_page, new_header_page.fix_data.hdr_page_size);
-
-  if ( i = -1) then
-  begin
-    ShowMessage ('Cannot write header page.');
-  end;
-  FileClose(db );
-  ShowMessage ('Header rewrite');
-
-
-
-
-  Exit;
-
-
-
-  found := 0;
-  src_i := 0;
-  dst_i := 0;
-  while (HeaderPage.var_data[src_i] > 0) do
-  begin
-    len := HeaderPage.var_data[src_i+1];
-
-    if (3 = HeaderPage.var_data[src_i]) then
-    begin
-      if ((sizeof(new_header_page.fix_data) + dst_i +  + 2) > new_header_page.fix_data.hdr_page_size ) then
-      begin
-        ShowMessage ('New file name does not fit into header page.');
-      end;
-
-      strlcopy(orig_link_name, Pchar(@HeaderPage.var_data[src_i+2]), len);
-      orig_link_name[len] := #0;
-
-     // writeln(format('Link changed from'+#13#10+'  "%s"'+#13#10+'to'+#13#10+'  "%s"', [orig_link_name, db_link_name]));
-
-      new_header_page.var_data[dst_i] := 3; inc(dst_i);
-      //new_header_page.var_data[dst_i] := strlen(PChar(dlgOpen1.FileName)); inc(dst_i);
-      //strcopy (Pchar(@new_header_page.var_data[dst_i]), PChar(dlgOpen1.FileName));
-      //inc(dst_i, strlen(db_link_name));
-      found := 1;
-    end else
-    begin
-
-
-
-      strlcopy(Pchar(@new_header_page.var_data[dst_i]), Pchar(@HeaderPage.var_data[src_i]), len+2);
-      inc(dst_i, len + 2);
-    end;
-
-    inc(src_i, len + 2);
-  end;
-
-  if (found = ord(false)) then
-  begin
-    ShowMessage('Continuation file not specified in header.');
-
-  end;
-
-  // compute new checksum
-  // 16 = "Microsoft Windows 32-bit Intel";
-  // 18 = "Microsoft Windows 16-bit";
-  is_win32 := ord(16 = new_header_page.fix_data.hdr_implementation);
-
-  // IB4 = ODS 8;  IB5 = ODS 9;  IB6 = ODS 10
-  // also see jrd/cch.c (CCH_checksum())
-  if (((is_win32 = ord(false)) and (HeaderPage.fix_data.hdr_ods_version >= 8)) or
-      ((is_win32 = ord(true))  and (HeaderPage.fix_data.hdr_ods_version >= 9)) or
-      (HeaderPage.fix_data.hdr_sequence > 0) ) then
-  begin
-    new_header_page.fix_data.hdr_header.pag_checksum := 12345;
-  end else
-  begin
-    //new_header_page.fix_data.hdr_header.pag_checksum :=
-  //    compute_checksum (new_header_page, new_header_page.fix_data.hdr_page_size);
-  end;
-
-  // write new version of header
-  fileseek(db, 0, 0);
-  i := filewrite(db, new_header_page, new_header_page.fix_data.hdr_page_size);
-
-  if ( i = -1) then
-  begin
-    ShowMessage ('Cannot write header page.');
-
-  end;
-  end;
-end;
-
 procedure TfrmMain.mniN1Click(Sender: TObject);
 begin
   if dlgSave1.Execute then lstLog.Items.SaveToFile(dlgSave1.FileName );
@@ -421,58 +335,44 @@ end;
 procedure TfrmMain.btnSeekClick(Sender: TObject);
 var TypePage:integer;
 begin
-  TypePage:=  RDatabase.typeCurrPage(StrToIntDef(edtPageNumber.text,0));
-  if TypePage<0 then  cbbTypePage.Text:='Unknown' else  cbbTypePage.ItemIndex:=TypePage-1;
-  edtCheckSum.Text:= IntToStr(RDatabase.typeCutypePageChecksumrrPage(StrToIntDef(edtPageNumber.text,0)));
+  edtPageNumber.Enabled:=False;
+  btnSeek.Enabled:=false;
+  cbbTypePage.Enabled:=False;
+  edtCheckSum.Enabled:=False;
+  btnReWrite.Enabled:=False;
+
+
+  TypePage:= RDatabase.typeCurrPage(StrToIntDef(edtPageNumber.text,0));
+  if TypePage<=0 then  cbbTypePage.Text:='Unknown' else  cbbTypePage.ItemIndex:=TypePage-1;
+  edtCheckSum.Text:= IntToStr(RDatabase.typePageChecksum(StrToIntDef(edtPageNumber.text,0)));
+
+  edtPageNumber.Enabled:=true;
+  btnSeek.Enabled:=true;
+  cbbTypePage.Enabled:=true;
+  edtCheckSum.Enabled:=true;
+  btnReWrite.Enabled:=true;
 end;
 
 procedure TfrmMain.btnReWriteClick(Sender: TObject);
-var db,i:integer;
-    DataPage:TDataPage;
+var TypePage:ShortInt;
 
 begin
   //ReWriting page
-  page_size_curr:=8192;
-  db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
-  fileseek(db, 0, 0);
-  fileseek(db, 1414484560*page_size_curr, 0);
-  i := fileread(db, DataPage, page_size_curr);
-  FileClose(db );
-  ShowMessage(inttostr(DataPage.fix_data.pagHdr_Header.pag_type) );
-  DataPage.fix_data.pagHdr_Header.pag_type:= 0;
-
- 
-
-  db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
-  fileseek(db, 0, 0);
-  fileseek(db, 1414484560*page_size_curr, 0);
-  i := filewrite(db, DataPage, page_size_curr);
-  FileClose(db );
-  ShowMessage('Данные записаны');
-end;
-
-procedure TfrmMain.btn7Click(Sender: TObject);
-var        db,i:Integer;
-pages :tippage;
-  newpages :tippage;
-begin
-  db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
-  fileseek(db, 0, 0);
-  fileseek(db, 148*8192, 0);
-  i := fileread(db, pages, 8192);
-  newpages:=pages;
-  newpages.fix_data.tip_next:=0;
-  fileseek(db, 0, 0);
-  fileseek(db, 148*8192, 0);
-  i := filewrite(db, newpages, 8192);
-  FileClose(db );
+  if Application.MessageBox('Do You Want to Rewrite Database Page?','ReWriting Page',MB_OKCANCEL+MB_ICONQUESTION) =6
+  then
+  begin
+    TypePage:= RDatabase.typeCurrPage(StrToIntDef(edtPageNumber.text,0));
+    if RDatabase.ReWritePage(TypePage,StrToIntDef(edtPageNumber.text,0),StrToIntDef(edtCheckSum.text,12345),StrToIntDef(edtNextTip.text,0),cbbTypePage.ItemIndex-1) then
+       Application.MessageBox('Data ReWrited!','Information',MB_OK+MB_ICONWARNING) else
+     Application.MessageBox('Data Does Not ReWrited!','Information',MB_OK+MB_ICONERROR);
+  end
 end;
 
 procedure TfrmMain.btnGetDataClick(Sender: TObject);
 var i,db,pCurrSize :Integer;
     DataData:TDataPage;
 begin
-   pCurrSize:=getCurrPageSize(dlgOpenDB.FileName);
+ {  pCurrSize:=getCurrPageSize(dlgOpenDB.FileName);
    try
      db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
      fileseek(db, 0, 0);
@@ -493,7 +393,7 @@ begin
     // lstData.Items.Add(ByteToHex(DataData.rhd_data[i]));
     // lstData.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));
    end;
-   ShowMessage('Finished');
+   ShowMessage('Finished');  }
 end;
 
 procedure TfrmMain.btnPIPClick(Sender: TObject);
@@ -506,7 +406,7 @@ var   FS  :TFileStream;
       DataData:TDataPage;
       DataData2:Trhd_page;
 begin
-   firstPointerPage:=-1;
+  { firstPointerPage:=-1;
    pCurrSize:=getCurrPageSize(dlgOpenDB.FileName);
    try
      FS := TFileStream.Create(dlgOpenDB.FileName, fmOpenRead or fmShareDenyNone);
@@ -562,6 +462,152 @@ begin
      lstLog.Items.Add(ByteToHex(DataData.rhd_data[i]));
      lstLog.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));
    end;  */ }
+
+
+
+end;
+
+procedure TfrmMain.btnClearDBClick(Sender: TObject);
+begin
+ if Assigned(RDatabase) then RDatabase.Free;
+ btnOpen.Enabled:=True;
+end;
+
+procedure TfrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  if Assigned(RDatabase)  then  RDatabase.Free;
+end;
+
+procedure TfrmMain.btnGetHeaderFlagsClick(Sender: TObject);
+var i:integer;
+begin
+  //Hdr_flags: Two bytes, unsigned. Bytes 0x2a and 0x2b on the page. The database flags.
+  //lstPages.Items.Clear;
+  edtFlags.Text:='';
+  edtFlags.Text:=RDatabase.GetHeaderFlags;
+   if  edtFlags.Text[1]  = '1'  then   lstDBFlags.Items.Add('This file is an active shadow file');
+   if  edtFlags.Text[2]  = '1'  then   lstDBFlags.Items.Add('The database is in forced writes mode');
+   if  edtFlags.Text[4]  = '1'  then   lstDBFlags.Items.Add('Dont calculate checksums');
+   if  edtFlags.Text[5]  = '1'  then   lstDBFlags.Items.Add('Dont reserve space for record versions in pages');
+
+   { https://firebirdsql.org/manual/fbint-page-1.html
+    hdr_active_shadow	0x01 (bit 0)	This file is an active shadow file.
+    hdr_force_write	0x02 (bit 1)	The database is in forced writes mode.
+    Unused	0x04 (bit 2)	Was previously for short term journalling, no longer used.
+    Unused	0x08 (bit 3)	Was previously for long term journalling, no longer used.
+    hdr_no_checksums	0x10 (bit 4)	Don't calculate checksums.
+    hdr_no_reserve	0x20 (bit 5)	Don'r reserve space for record versions in pages.
+    Unused	0x40 (bit 6)	Was used to indicate that the shared cache file was disabled.
+    hdr_shutdown_mask (bit one of two)	0x1080 (bits 7 and 12)	Used with bit 12 (see below) to indicate the database shutdown mode.
+    hdr_sql_dialect_3	0x100 (bit 8)	If set, the database is using SQL dialect 3.
+    hdr_read_only	0x200 (bit 9)	Database is in read only mode.
+    hdr_backup_mask	0xC00 (bits 10 and 11)	Indicates the current backup mode.
+    hdr_shutdown_mask (bit two of two)	0x1080 (bits 7 and 12)	Used with bit 7 (see above) to indicate the database shutdown mode
+
+
+
+   }
+
+
+
+   if  edtFlags.Text[9]  = '1'  then   lstDBFlags.Items.Add('Dialect 3');
+   if  edtFlags.Text[10]  = '1'  then   lstDBFlags.Items.Add('Read Only');
+
+end;
+
+procedure TfrmMain.clearUserGui;
+begin
+  lbNameDB.Caption:='';
+  lbCurr.Caption:='0';
+  lbAll.Caption:='0';
+  edtFlags.text:='';
+ // lstPages.Items.Clear;
+  lstLog.Items.Clear;
+  edtPageNumber.Enabled:=False;
+  btnSeek.Enabled:=false
+end;
+
+procedure TfrmMain.FormShow(Sender: TObject);
+begin
+  statDB.Panels[0].Width:=100;
+  statDB.Panels[0].Text:= DateToStr(now());
+  pgcServices.Pages[0].Show;
+end;
+
+procedure TfrmMain.btnWriteFlagsClick(Sender: TObject);
+var flags,resString:string;
+  s:Byte;
+  i:Integer;
+begin
+
+  flags:=RDatabase.GetHeaderFlags;
+   if  flags[1]  = '1'  then   lstDBFlags.Items.Add('This file is an active shadow file');
+   if  flags[2]  = '1'  then   lstDBFlags.Items.Add('The database is in forced writes mode');
+   if  flags[4]  = '1'  then   lstDBFlags.Items.Add('Dont calculate checksums');
+   if  flags[5]  = '1'  then   lstDBFlags.Items.Add('Dont reserve space for record versions in pages');
+   if  flags[9]  = '1'  then   lstDBFlags.Items.Add('Dialect 3');
+   if  flags[10]  = '1'  then   lstDBFlags.Items.Add('Read Only');
+
+
+   if chkSetFW.Checked then    flags[2]  := '1' else  flags[2]  := '0';
+   if chkReadOnly.Checked then    flags[10]  := '1' else flags[10]  := '0';
+
+   RDatabase.SetHeaderFlags(flags);
+
+
+
+
+
+end;
+
+procedure TfrmMain.tsFlagsShow(Sender: TObject);
+var flags:string;
+begin
+ { flags:=RDatabase.GetHeaderFlags;
+  if  edtFlags.Text[10]  = '1'  then   chkReadOnly.Checked:=True;
+  if  edtFlags.Text[2]  = '1'  then   chkSetFW.Checked:=True; }
+
+end;
+
+procedure TfrmMain.pgcServicesChange(Sender: TObject);
+var flags : TCaption;
+begin
+  if tsFlags.Showing then
+  begin
+    if Assigned(RDatabase) then
+    begin
+      flags:=RDatabase.GetHeaderFlags;
+      if  flags[10]  = '1'  then   chkReadOnly.Checked:=True;
+      if  flags[2]  = '1'  then   chkSetFW.Checked:=True;
+    end
+  end
+end;
+
+procedure TfrmMain.btnGenerateClick(Sender: TObject);
+begin
+  ShowMessage('Doesn''t work yet');
+end;
+
+procedure TfrmMain.btnGotoPageClick(Sender: TObject);
+var DataPage:TDataPage;
+    i:Integer;
+begin
+  DataPage:=RDatabase.GetDataPage(StrToIntDef(edtPageNumber.text,0));
+  pbDataProgress.Min:=0;
+  pbDataProgress.Max:=length(DataPage.dpg_repeat)-1;
+  for i :=0 to length(DataPage.dpg_repeat)-1
+  do
+  begin
+    pbDataProgress.Position:=pbDataProgress.Position+1;
+    // mmoData.Text:=  mmoData.Text+' '+  StrToInt('$'+ByteToHex(DataPage.dpg_repeat[i].dpg_offset));
+     Application.ProcessMessages;
+
+    // mmoData.Text:=  mmoData.Text+' '+ByteToHex(DataPage.rhd_data[i]) ;
+      //mmoData.Text:=  mmoData.Text+' '+Chr(StrToInt('$'+ByteToHex(DataPage.rhd_data[i]))) ;
+     {lstData.Items.Add(ByteToHex(DataData.rhd_data[i]));
+     lstData.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));}
+   end;
+
 
 
 
