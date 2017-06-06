@@ -24,3 +24,9 @@ Now it features:
 * Blob Data Page
 * Generator Page
 * Write Ahead Log Page
+
+## License
+MIT:
+
+## Author
+Gordienko Roman
