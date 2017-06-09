@@ -6,96 +6,11 @@ uses
   Dialogs, StdCtrls, FileCtrl, ComCtrls,struck, DB, ExtCtrls,
   Menus, uCommon,uDatabase, XPMan,uDataPage, Grids, DBGrids, DBClient,
   DBCtrls;
-const
-  MAX_PAGE_SIZE = 32768;
-  MIN_PAGE_SIZE = 1024;
-  PBM_SETBARCOLOR = WM_USER + 9;
+
   type
-
-  SChar = Shortint;
-  SShort = Smallint;
-  UShort = Word;
-  SLong = Longint;
-  ULong = LongWord;  
-
-  TPag = packed record
-    pag_type: SChar;
-    pag_flags: SChar;
-    pag_checksum: UShort;
-    pag_generation: ULong;
-    pag_seqno: ULong;
-    pg_offset: ULong;
-  end;
-
-  tip = packed record
-    tip_header: Tpag ;
-    tip_next: SLONG;
-  end;
-
-   tippage = packed record
-    fix_data: tip;
-    tip_transactions: array[0..(4096-sizeof(tip))] of UCHAR;
-  end;
+PDpg_repeat = ^TDpg_rpt;
 
 
-  THdr = packed record
-    hdr_header: TPag;
-    hdr_page_size: UShort;
-    hdr_ods_version: UShort;
-    hdr_pages: SLong;
-    hdr_next_page: ULong;
-    hdr_oldest_transaction: SLong;
-    hdr_oldest_active: SLong;
-    hdr_next_transaction: SLong;
-    hdr_sequence: UShort;
-    hdr_flags: UShort;
-    hdr_creation_date: array[0..1] of SLong;
-    hdr_attachment_id: SLong;
-    hdr_shadow_count: SLong;
-    hdr_implementation: SShort;
-    hdr_ods_minor: UShort;
-    hdr_ods_minor_original: UShort;
-    hdr_end: UShort;
-    hdr_page_buffers: ULong;
-    hdr_bumped_transaction: SLong;
-    hdr_oldest_snapshot: SLong;
-    hdr_misc: array[0..3] of SLong;
-  end;
-
-  THdrPage = packed record
-    fix_data: THdr;
-    var_data:array[0..(MAX_PAGE_SIZE-sizeof(THdr))] of UCHAR;
-  end;
-
-  Tgenerator_page  = record
-	gpg_header: TPag;
-	gpg_sequence: ULONG ;			// Sequence number
-        		// Generator vector
-  end;
-  Tgnrtr_page  = record
-    fix_data1: Tgenerator_page;			// Sequence number
-    gpg_values :array[0..(MAX_PAGE_SIZE-sizeof(Tgenerator_page))] of Int64;    		// Generator vector
-  end;
-   PDpg_repeat = ^TDpg_rpt;
-
-  {
- TDpg_rpt = record
- dpg_offset : Word;
- dpg_length : Word;
-end;
-
-TData_Page = record
- pagHdr_Header : TPag;
- dpg_sequence : Longint;
- dpg_relation : Word;
- dpg_count : Word;
-end;
-
-TDataPage = record
- fix_data: TData_Page;
- dpg_repeat : array[0..(MAX_PAGE_SIZE-sizeof(TData_Page))] of TDpg_rpt;
-end;
- }
 trhd1 = record
     rhd_transaction: SLONG ;
     rhd_b_page:  SLONG ;
@@ -110,21 +25,6 @@ trhd1 = record
     rhd_data:array[0..(MAX_PAGE_SIZE-sizeof(trhd1))] of UCHAR;
   end ;
 
-Tpnr_page  =  record
-    pp_header: Tpag;
-    ppg_sequence: SLONG ;
-    ppg_next: SLONG;
-    ppg_count: USHORT;
-    ppg_relation: USHORT;
-    ppg_min_space: USHORT;
-    ppg_max_space: USHORT;
-
-end;
-
-TPointer_page =  record
-    fix_data: Tpnr_page;
-    ppg_page:array[0..(MAX_PAGE_SIZE-sizeof(Tpnr_page))] of SLONG;
-  end;
 
 
 type
@@ -180,9 +80,7 @@ type
     tsGenerateNewPage: TTabSheet;
     btnGenerate: TButton;
     lb2: TLabel;
-    Position: TLabel;
     cbbTypePageGen: TComboBox;
-    edtPagePosition: TEdit;
     chkSetFW: TCheckBox;
     chkReadOnly: TCheckBox;
     statDB: TStatusBar;
@@ -202,6 +100,8 @@ type
     mmoData: TMemo;
     lb3: TLabel;
     pbDataProgress: TProgressBar;
+    edtNewAddr: TEdit;
+    lb4: TLabel;
     procedure btnOpenClick(Sender: TObject);
     procedure btnCheckClick(Sender: TObject);
     procedure mniN1Click(Sender: TObject);
@@ -306,11 +206,11 @@ begin
        8:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Blob Page'; inc(CountBlobPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
        9:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Generator Page'; inc(CountGeneratorPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type;dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post; end;
        10:begin dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Write Ahead Log page'; inc(CountWriteAheadLogPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type; dsPages.Fields[3].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_checksum; dsPages.Post;  end;
-       else
-       begin
-          dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Unknown page'; inc(CountUnknownPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type; dsPages.Post;
-       end
-      end;
+    else
+      begin
+        dsPages.Insert;dsPages.Fields[0].AsInteger:=i;dsPages.Fields[1].AsString:=' Unknown page'; inc(CountUnknownPage); dsPages.Fields[2].AsInteger:=DataPage.fix_data.pagHdr_Header.pag_type; dsPages.Post;
+      end
+    end;
       inc(i);
       lbCurr.Caption:=IntToStr(i);
       pbDetectedPage.Position:=i;
@@ -534,30 +434,22 @@ begin
   pgcServices.Pages[0].Show;
 end;
 
+// Write flag function
 procedure TfrmMain.btnWriteFlagsClick(Sender: TObject);
 var flags,resString:string;
   s:Byte;
   i:Integer;
 begin
-
   flags:=RDatabase.GetHeaderFlags;
-   if  flags[1]  = '1'  then   lstDBFlags.Items.Add('This file is an active shadow file');
-   if  flags[2]  = '1'  then   lstDBFlags.Items.Add('The database is in forced writes mode');
-   if  flags[4]  = '1'  then   lstDBFlags.Items.Add('Dont calculate checksums');
-   if  flags[5]  = '1'  then   lstDBFlags.Items.Add('Dont reserve space for record versions in pages');
-   if  flags[9]  = '1'  then   lstDBFlags.Items.Add('Dialect 3');
-   if  flags[10]  = '1'  then   lstDBFlags.Items.Add('Read Only');
-
-
-   if chkSetFW.Checked then    flags[2]  := '1' else  flags[2]  := '0';
-   if chkReadOnly.Checked then    flags[10]  := '1' else flags[10]  := '0';
-
-   RDatabase.SetHeaderFlags(flags);
-
-
-
-
-
+  if  flags[1]  = '1'  then   lstDBFlags.Items.Add('This file is an active shadow file');
+  if  flags[2]  = '1'  then   lstDBFlags.Items.Add('The database is in forced writes mode');
+  if  flags[4]  = '1'  then   lstDBFlags.Items.Add('Dont calculate checksums');
+  if  flags[5]  = '1'  then   lstDBFlags.Items.Add('Dont reserve space for record versions in pages');
+  if  flags[9]  = '1'  then   lstDBFlags.Items.Add('Dialect 3');
+  if  flags[10]  = '1'  then   lstDBFlags.Items.Add('Read Only');
+  if chkSetFW.Checked then    flags[2]  := '1' else  flags[2]  := '0';
+  if chkReadOnly.Checked then    flags[10]  := '1' else flags[10]  := '0';
+  RDatabase.SetHeaderFlags(flags);
 end;
 
 procedure TfrmMain.tsFlagsShow(Sender: TObject);
@@ -585,14 +477,14 @@ end;
 
 procedure TfrmMain.btnGenerateClick(Sender: TObject);
 begin
-  ShowMessage('Doesn''t work yet');
+  edtNewAddr.Text:= inttostr(RDatabase.GenerateNewPage(cbbTypePageGen.ItemIndex));
 end;
 
 procedure TfrmMain.btnGotoPageClick(Sender: TObject);
 var DataPage:TDataPage;
     i:Integer;
 begin
-  DataPage:=RDatabase.GetDataPage(StrToIntDef(edtPageNumber.text,0));
+ { DataPage:=RDatabase.GetDataPage(StrToIntDef(edtNPaged:cd cd.text,0));
   pbDataProgress.Min:=0;
   pbDataProgress.Max:=length(DataPage.dpg_repeat)-1;
   for i :=0 to length(DataPage.dpg_repeat)-1
@@ -606,8 +498,8 @@ begin
       //mmoData.Text:=  mmoData.Text+' '+Chr(StrToInt('$'+ByteToHex(DataPage.rhd_data[i]))) ;
      {lstData.Items.Add(ByteToHex(DataData.rhd_data[i]));
      lstData.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));}
-   end;
-
+  { end;
+       }
 
 
 

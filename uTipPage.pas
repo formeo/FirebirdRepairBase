@@ -1,4 +1,10 @@
 unit uTipPage;
+{
+  separate unit for TIP page
+
+}
+
+
 
 interface
 

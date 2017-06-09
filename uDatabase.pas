@@ -2,7 +2,7 @@ unit uDatabase;
 
 interface
 
-uses classes, Sysutils,uCommon,uHeaderPage,uTipPage,uDataPage;
+uses classes, Sysutils,uCommon,uHeaderPage,uTipPage,uDataPage,uPoiner,uGenPage;
 
 const
   MAX_PAGE_SIZE = 32768;
@@ -25,13 +25,14 @@ type
     destructor Destroy; override;
     procedure AddValue(Value: string);
     procedure Clear;
-    function Solve: real;
+    
     function DBFileSize:Int64;
     function typeCurrPage(PageNum: int64):integer;
     function typePageChecksum(PageNum: int64):integer;
     function GetNextDataPage:TDataPage;
     function GetDataPage(PageNum: int64):TDataPage;
     function EmptyDataPage:boolean;
+    function GenerateNewPage(const PageType : Smallint):Int64;
     function ReWritePage(typePagePrew:Shortint; PageNumber:Int64;Checksum:Integer;TipeNext:Integer;typePage:Integer):Boolean;
     function GetHeaderFlags:string;
     procedure SetHeaderFlags(const flags :string);
@@ -80,6 +81,28 @@ end;
 function TFBDatabase.EmptyDataPage: boolean;
 begin
   result:=_EmptyDataPage;
+end;
+
+function TFBDatabase.GenerateNewPage(const PageType: Smallint): Int64;
+var   FS: TFileStream;
+      DataPage:TDataPage;
+      TipPage:TTipPage;
+      PointerPage:TPointer_page;
+      GeneratorPage:TGenerator_page;
+begin
+  if PageType = 0 then
+  begin
+    FillChar(TipPage, SizeOf(TipPage), 0);
+    try
+      FS := TFileStream.Create(_NameDB, fmOpenReadWrite or fmShareDenyNone);
+      FS.Position := FS.Size;
+      FS.Write(TipPage,sizeof(TipPage));
+      result:=  round(FS.Size/_page_size_curr);
+    finally
+      FS.Free;
+    end;
+  end;
+
 end;
 
 function TFBDatabase.GetCount: integer;
@@ -276,10 +299,6 @@ begin
   end;
 end;
 
-function TFBDatabase.Solve: real;
-begin
-
-end;
 
 function TFBDatabase.typeCurrPage(PageNum: int64): integer;
 var db,i:integer;

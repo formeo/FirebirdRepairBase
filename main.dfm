@@ -1,6 +1,6 @@
 object frmMain: TfrmMain
-  Left = 401
-  Top = 171
+  Left = 449
+  Top = 37
   Width = 1130
   Height = 803
   Caption = 'Repare Firebird DB'
@@ -5266,7 +5266,7 @@ object frmMain: TfrmMain
       Top = 309
       Width = 495
       Height = 337
-      ActivePage = tsWorkPages
+      ActivePage = tsGenerateNewPage
       Align = alBottom
       Anchors = [akLeft, akTop, akRight, akBottom]
       TabOrder = 1
@@ -5360,9 +5360,9 @@ object frmMain: TfrmMain
             object lbl5: TLabel
               Left = 280
               Top = 24
-              Width = 185
+              Width = 175
               Height = 13
-              Caption = #1057#1083#1077#1076#1091#1102#1097#1072#1103' ('#1044#1083#1103' TIP '#1089#1090#1088#1072#1085#1080#1094'):'
+              Caption = 'Next page (only for TIP pages):'
               Font.Charset = RUSSIAN_CHARSET
               Font.Color = clWindowText
               Font.Height = -11
@@ -5555,7 +5555,7 @@ object frmMain: TfrmMain
         ImageIndex = 3
         object lb2: TLabel
           Left = 8
-          Top = 16
+          Top = 8
           Width = 31
           Height = 13
           Caption = 'Type:'
@@ -5566,12 +5566,12 @@ object frmMain: TfrmMain
           Font.Style = [fsBold]
           ParentFont = False
         end
-        object Position: TLabel
+        object lb4: TLabel
           Left = 8
           Top = 56
-          Width = 48
+          Width = 105
           Height = 13
-          Caption = 'Position:'
+          Caption = 'Generated Adress:'
           Font.Charset = RUSSIAN_CHARSET
           Font.Color = clWindowText
           Font.Height = -11
@@ -5590,15 +5590,15 @@ object frmMain: TfrmMain
         end
         object cbbTypePageGen: TComboBox
           Left = 8
-          Top = 32
+          Top = 24
           Width = 337
           Height = 21
           Style = csDropDownList
           ItemHeight = 13
+          ItemIndex = 0
           TabOrder = 1
+          Text = 'Page Inventory Page (TIP)'
           Items.Strings = (
-            'HeaderPage'
-            'Page Inventory Page (PIP)'
             'Page Inventory Page (TIP)'
             'Pointer Page'
             'Data Page'
@@ -5608,11 +5608,12 @@ object frmMain: TfrmMain
             'Generator Page  '
             'Write Ahead Log page')
         end
-        object edtPagePosition: TEdit
+        object edtNewAddr: TEdit
           Left = 8
           Top = 72
           Width = 337
           Height = 21
+          ReadOnly = True
           TabOrder = 2
         end
       end

@@ -12,7 +12,9 @@ uses
   uHeaderPage in 'uHeaderPage.pas',
   uPag in 'uPag.pas',
   uTipPage in 'uTipPage.pas',
-  uDataPage in 'uDataPage.pas';
+  uDataPage in 'uDataPage.pas',
+  uGenPage in 'uGenPage.pas',
+  uPoiner in 'uPoiner.pas';
 
 {$R *.res}
 
@@ -21,7 +23,7 @@ begin
     Application.Initialize;
     Application.Title := 'FirebirdRepairBase';
     Application.CreateForm(TfrmMain, frmMain);
-    Application.Run;
+  Application.Run;
   except
     on E: Exception do
     begin
