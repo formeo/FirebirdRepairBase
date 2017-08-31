@@ -403,16 +403,9 @@ begin
     hdr_read_only	0x200 (bit 9)	Database is in read only mode.
     hdr_backup_mask	0xC00 (bits 10 and 11)	Indicates the current backup mode.
     hdr_shutdown_mask (bit two of two)	0x1080 (bits 7 and 12)	Used with bit 7 (see above) to indicate the database shutdown mode
-
-
-
-   }
-
-
-
+     }
    if  edtFlags.Text[9]  = '1'  then   lstDBFlags.Items.Add('Dialect 3');
    if  edtFlags.Text[10]  = '1'  then   lstDBFlags.Items.Add('Read Only');
-
 end;
 
 procedure TfrmMain.clearUserGui;
@@ -421,7 +414,6 @@ begin
   lbCurr.Caption:='0';
   lbAll.Caption:='0';
   edtFlags.text:='';
- // lstPages.Items.Clear;
   lstLog.Items.Clear;
   edtPageNumber.Enabled:=False;
   btnSeek.Enabled:=false

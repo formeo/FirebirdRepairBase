@@ -1,6 +1,6 @@
 object frmMain: TfrmMain
-  Left = 449
-  Top = 37
+  Left = 445
+  Top = 95
   Width = 1130
   Height = 803
   Caption = 'Repare Firebird DB'
@@ -5181,7 +5181,7 @@ object frmMain: TfrmMain
       Top = 8
       Width = 75
       Height = 25
-      Caption = 'ReleaceDB'
+      Caption = 'ReleaseDB'
       TabOrder = 4
       OnClick = btnClearDBClick
     end
@@ -5793,7 +5793,7 @@ object frmMain: TfrmMain
     Aggregates = <>
     Params = <>
     Left = 528
-    Top = 384
+    Top = 216
     object fPageNumber: TLargeintField
       FieldName = 'PageNumber'
     end
@@ -5811,6 +5811,6 @@ object frmMain: TfrmMain
   object dsDataPages: TDataSource
     DataSet = dsPages
     Left = 568
-    Top = 392
+    Top = 216
   end
 end
