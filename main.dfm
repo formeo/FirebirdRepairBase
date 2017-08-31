@@ -5553,6 +5553,9 @@ object frmMain: TfrmMain
       object tsGenerateNewPage: TTabSheet
         Caption = 'Generate new page'
         ImageIndex = 3
+        DesignSize = (
+          487
+          309)
         object lb2: TLabel
           Left = 8
           Top = 8
@@ -5568,10 +5571,23 @@ object frmMain: TfrmMain
         end
         object lb4: TLabel
           Left = 8
-          Top = 56
-          Width = 105
+          Top = 48
+          Width = 75
           Height = 13
-          Caption = 'Generated Adress:'
+          Caption = 'New Address:'
+          Font.Charset = RUSSIAN_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -11
+          Font.Name = 'Tahoma'
+          Font.Style = [fsBold]
+          ParentFont = False
+        end
+        object lbresult: TLabel
+          Left = 8
+          Top = 88
+          Width = 115
+          Height = 13
+          Caption = 'Generated  Address:'
           Font.Charset = RUSSIAN_CHARSET
           Font.Color = clWindowText
           Font.Height = -11
@@ -5584,6 +5600,7 @@ object frmMain: TfrmMain
           Top = 280
           Width = 75
           Height = 25
+          Anchors = [akRight, akBottom]
           Caption = 'Generate'
           TabOrder = 0
           OnClick = btnGenerateClick
@@ -5610,11 +5627,21 @@ object frmMain: TfrmMain
         end
         object edtNewAddr: TEdit
           Left = 8
-          Top = 72
+          Top = 104
           Width = 337
           Height = 21
           ReadOnly = True
           TabOrder = 2
+        end
+        object sePosition: TSpinEdit
+          Left = 8
+          Top = 64
+          Width = 201
+          Height = 22
+          MaxValue = 0
+          MinValue = 0
+          TabOrder = 3
+          Value = 0
         end
       end
     end

@@ -297,15 +297,11 @@ begin
       ToFile.Size := FileSize;
       ToFile.Position := 0;
       FromFile.Position := 0;
-
-
       NumRead := FromFile.Read(Buffer[0], BUFFER_SIZE);
       while NumRead > 0 do
       begin
         CopiedSize := CopiedSize + NumRead;
-
         NumRead := FromFile.Read(Buffer[0], BUFFER_SIZE);
-
       end;
 
     finally

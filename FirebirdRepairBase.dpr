@@ -23,7 +23,7 @@ begin
     Application.Initialize;
     Application.Title := 'FirebirdRepairBase';
     Application.CreateForm(TfrmMain, frmMain);
-  Application.Run;
+    Application.Run;
   except
     on E: Exception do
     begin

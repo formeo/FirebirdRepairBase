@@ -5,7 +5,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, FileCtrl, ComCtrls,struck, DB, ExtCtrls,
   Menus, uCommon,uDatabase, XPMan,uDataPage, Grids, DBGrids, DBClient,
-  DBCtrls;
+  DBCtrls, Spin;
 
   type
 PDpg_repeat = ^TDpg_rpt;
@@ -102,6 +102,8 @@ type
     pbDataProgress: TProgressBar;
     edtNewAddr: TEdit;
     lb4: TLabel;
+    sePosition: TSpinEdit;
+    lbresult: TLabel;
     procedure btnOpenClick(Sender: TObject);
     procedure btnCheckClick(Sender: TObject);
     procedure mniN1Click(Sender: TObject);
@@ -460,16 +462,26 @@ begin
   begin
     if Assigned(RDatabase) then
     begin
-      flags:=RDatabase.GetHeaderFlags;
-      if  flags[10]  = '1'  then   chkReadOnly.Checked:=True;
-      if  flags[2]  = '1'  then   chkSetFW.Checked:=True;
+      flags := RDatabase.GetHeaderFlags;
+      if flags[10] = '1' then
+        chkReadOnly.Checked := True;
+      if flags[2] = '1' then
+        chkSetFW.Checked := True;
     end
-  end
+  end;
+  if tsGenerateNewPage.Showing then
+    if Assigned(RDatabase) then
+    begin
+      sePosition.MaxValue := round(RDatabase.DBFileSize / RDatabase.Curr_page_size);
+    end;
 end;
 
 procedure TfrmMain.btnGenerateClick(Sender: TObject);
 begin
-  edtNewAddr.Text:= inttostr(RDatabase.GenerateNewPage(cbbTypePageGen.ItemIndex));
+ // edtNewAddr.Text:= inttostr(RDatabase.GenerateNewPage(cbbTypePageGen.ItemIndex));
+
+  if  RDatabase.GenerateNewPagePosition(cbbTypePageGen.ItemIndex,sePosition.Value)=1   then
+  Application.MessageBox('Page Added!','Information',MB_OK+MB_ICONWARNING)
 end;
 
 procedure TfrmMain.btnGotoPageClick(Sender: TObject);

@@ -25,7 +25,6 @@ type
     destructor Destroy; override;
     procedure AddValue(Value: string);
     procedure Clear;
-    
     function DBFileSize:Int64;
     function typeCurrPage(PageNum: int64):integer;
     function typePageChecksum(PageNum: int64):integer;
@@ -33,13 +32,13 @@ type
     function GetDataPage(PageNum: int64):TDataPage;
     function EmptyDataPage:boolean;
     function GenerateNewPage(const PageType : Smallint):Int64;
+    function GenerateNewPagePosition(const PageType : Smallint;Position:int64):Int64;
     function ReWritePage(typePagePrew:Shortint; PageNumber:Int64;Checksum:Integer;TipeNext:Integer;typePage:Integer):Boolean;
     function GetHeaderFlags:string;
     procedure SetHeaderFlags(const flags :string);
     property Count: integer read GetCount;
     property NameDB: string read GetNameDB;
     property Curr_page_size: integer read GetCurrPageSizeDB;
-    
   end;
 
 
@@ -102,7 +101,48 @@ begin
       FS.Free;
     end;
   end;
+end;
 
+function TFBDatabase.GenerateNewPagePosition(const PageType: Smallint;
+  Position: int64): Int64;
+  var   FromFile, ToFile: TFileStream;
+        Buffer: array[0..8192 - 1] of byte;
+        NumRead: Longint;
+        FileSize, CopiedSize: Int64;
+         TipPage:TTipPage;
+begin
+  FillChar(TipPage, SizeOf(TipPage), 0);
+  FileSize := GetFileSizeBase(_NameDB);
+  FromFile := TFileStream.Create(_NameDB, fmOpenRead or fmShareDenyNone);
+  try
+    if FileExists('new_base.FDB') then
+      ToFile := TFileStream.Create('new_base.FDB', fmOpenReadWrite or fmShareDenyWrite)
+    else
+      ToFile := TFileStream.Create('new_base.FDB', fmCreate);
+    try
+      CopiedSize := 0;
+      ToFile.Size := FileSize+_page_size_curr;
+      ToFile.Position := 0;
+      FromFile.Position := 0;
+      NumRead := FromFile.Read(Buffer[0], _page_size_curr);
+      ToFile.Write(Buffer[0], _page_size_curr);
+      while NumRead > 0 do
+      begin
+        CopiedSize := CopiedSize + NumRead;
+        if CopiedSize = Position * _page_size_curr then
+          ToFile.Write(TipPage, sizeof(TipPage));
+        NumRead := FromFile.Read(Buffer[0], _page_size_curr);
+        ToFile.Write(TipPage, sizeof(TipPage))
+      end;
+    finally
+      FreeAndNil(ToFile);
+    end;
+  finally
+    FreeAndNil(FromFile);
+  end;
+  DeleteFile(_NameDB);
+  RenameFile('new_base.FDB', _NameDB);
+  result := 1;     
 end;
 
 function TFBDatabase.GetCount: integer;
