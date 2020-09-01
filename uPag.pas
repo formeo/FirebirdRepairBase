@@ -9,7 +9,7 @@ type
   SLong = Longint;
   ULong = LongWord;
 
-TPag = packed record
+  TPag = packed record
     pag_type: SChar;
     pag_flags: SChar;
     pag_checksum: UShort;

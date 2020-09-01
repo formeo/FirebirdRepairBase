@@ -2,20 +2,20 @@ unit uHeaderPage;
 
 interface
 
-uses uPag,Windows;
+uses uPag, Windows;
 
 const
   MAX_PAGE_SIZE = 32768;
   MIN_PAGE_SIZE = 1024;
 
- type
+type
   SChar = Shortint;
   SShort = Smallint;
   UShort = Word;
   SLong = Longint;
   ULong = LongWord;
 
- THdr = packed record
+  THdr = packed record
     hdr_header: TPag;
     hdr_page_size: UShort;
     hdr_ods_version: UShort;
@@ -26,7 +26,7 @@ const
     hdr_next_transaction: SLong;
     hdr_sequence: UShort;
     hdr_flags: UShort;
-    hdr_creation_date: array[0..1] of SLong;
+    hdr_creation_date: array [0 .. 1] of SLong;
     hdr_attachment_id: SLong;
     hdr_shadow_count: SLong;
     hdr_implementation: SShort;
@@ -36,12 +36,12 @@ const
     hdr_page_buffers: ULong;
     hdr_bumped_transaction: SLong;
     hdr_oldest_snapshot: SLong;
-    hdr_misc: array[0..3] of SLong;
+    hdr_misc: array [0 .. 3] of SLong;
   end;
 
- THdrPage = packed record
+  THdrPage = packed record
     fix_data: THdr;
-    var_data:array[0..(MAX_PAGE_SIZE-sizeof(THdr))] of UCHAR;
+    var_data: array [0 .. (MAX_PAGE_SIZE - sizeof(THdr))] of UCHAR;
   end;
 
 implementation

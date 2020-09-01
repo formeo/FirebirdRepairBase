@@ -5,7 +5,7 @@ uses
   Windows,
   SysUtils,
   Dialogs,
-  main in 'main.pas' {frmMain},
+  main in 'main.pas' {frmMain} ,
   struck in 'struck.pas',
   uCommon in 'uCommon.pas',
   uDatabase in 'uDatabase.pas',
@@ -27,9 +27,11 @@ begin
   except
     on E: Exception do
     begin
-        MessageBox(Application.Handle, PChar(' Fatal error. Application will be closed'  + E.Message),
-            'ERROR', MB_ICONERROR + MB_OK);
-        Application.Terminate;
+      MessageBox(Application.Handle,
+        PChar(' Fatal error. Application will be closed' + E.Message), 'ERROR',
+        MB_ICONERROR + MB_OK);
+      Application.Terminate;
     end;
   end;
+
 end.

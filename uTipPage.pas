@@ -4,11 +4,9 @@ unit uTipPage;
 
 }
 
-
-
 interface
 
-uses uPag,Windows;
+uses uPag, Windows;
 
 type
   SChar = Shortint;
@@ -17,14 +15,14 @@ type
   SLong = Longint;
   ULong = LongWord;
 
-   tip = packed record
-    tip_header: Tpag ;
-    tip_next: SLONG;
+  tip = packed record
+    tip_header: Tpag;
+    tip_next: SLong;
   end;
 
-   TTipPage = packed record
+  TTipPage = packed record
     fix_data: tip;
-    tip_transactions: array[0..(4096-sizeof(tip))] of UCHAR;
+    tip_transactions: array [0 .. (4096 - sizeof(tip))] of UCHAR;
   end;
 
 implementation

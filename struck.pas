@@ -1,21 +1,19 @@
 unit struck;
 
-
-
 interface
 
-uses 
+uses
   SysUtils, Classes;
+
 const
   cMAX_PAGE_SIZE = 32768;
+
 type
-       SChar = Shortint;
+  SChar = Shortint;
   SShort = Smallint;
   UShort = Word;
   SLong = Longint;
   ULong = LongWord;
-
-
 
   TPag = packed record
 
@@ -32,8 +30,6 @@ type
     pg_offset: ULong;
 
   end;
-
-
 
   THdr = packed record
 
@@ -57,7 +53,7 @@ type
 
     hdr_flags: UShort;
 
-    hdr_creation_date: array[0..1] of SLong;
+    hdr_creation_date: array [0 .. 1] of SLong;
 
     hdr_attachment_id: SLong;
 
@@ -77,27 +73,23 @@ type
 
     hdr_oldest_snapshot: SLong;
 
-    hdr_misc: array[0..3] of SLong;
+    hdr_misc: array [0 .. 3] of SLong;
 
   end;
-
-
 
   THdrPage = packed record
 
     fix_data: THdr;
 
-    var_data: array[0..cMAX_PAGE_SIZE - 1 - SizeOf(THdr)] of Byte;
+    var_data: array [0 .. cMAX_PAGE_SIZE - 1 - SizeOf(THdr)] of Byte;
 
   end;
 
 
 
-  //Not IB related
+  // Not IB related
 
   EGDBError = class(Exception);
-
-
 
   PGDBFile = ^TGDBFileInfo;
 
@@ -109,8 +101,6 @@ type
     LastLogicalPage: LongWord;
     TotalPages: LongWord;
   end;
-
-
 
   TGDBInfo = class
   private
@@ -130,32 +120,20 @@ type
 
     destructor Destroy; override;
 
-
-
     function Count: Integer;
 
     property Items[I: Integer]: TGDBFileInfo read GetItem; default;
 
   end;
 
-
-
-
-
 implementation
 
-
-
 { TGDBInfo }
-
-
 
 function TGDBInfo.Count: Integer;
 begin
   Result := FList.Count;
 end;
-
-
 
 constructor TGDBInfo.Create(const AFilename: string);
 begin
@@ -177,8 +155,6 @@ begin
   inherited;
 end;
 
-
-
 procedure TGDBInfo.GetDBFiles;
 var
   FS: TFileStream;
@@ -190,10 +166,12 @@ var
   SourceDir: string;
   DataOffset: Integer;
 begin
-  if not FileExists(FFilename) then raise EGDBError.Create('File does not exist - ' + FFilename);
+  if not FileExists(FFilename) then
+    raise EGDBError.Create('File does not exist - ' + FFilename);
 
   SourceDir := ExtractFilePath(FFilename);
-  if SourceDir = '' then SourceDir := IncludeTrailingBackSlash(GetCurrentDir);
+  if SourceDir = '' then
+    SourceDir := IncludeTrailingBackSlash(GetCurrentDir);
   StartPage := 0;
   CurrentFilename := SourceDir + ExtractFilename(FFilename);
   repeat
@@ -203,29 +181,34 @@ begin
       FS.Read(HeaderPage, SizeOf(HeaderPage));
       Move(HeaderPage, NewFile.Header, SizeOf(THdr));
       DataOffset := 0;
-      //Format of var_data is repeated
-      //1 = Root file name
-      //2 = Journal server
-      //3 = Continuation file (this is the one we want)
-      //4 = Last logical page
-      //5 = Unlicensed accesses
-      //6 = Sweep interval
-      //7 = Replay logging file
-      //11= Shared cache file
+      // Format of var_data is repeated
+      // 1 = Root file name
+      // 2 = Journal server
+      // 3 = Continuation file (this is the one we want)
+      // 4 = Last logical page
+      // 5 = Unlicensed accesses
+      // 6 = Sweep interval
+      // 7 = Replay logging file
+      // 11= Shared cache file
 
       while HeaderPage.var_data[DataOffset] <> 3 do
       begin
-        if HeaderPage.var_data[DataOffset + 1] = 0 then Break;
+        if HeaderPage.var_data[DataOffset + 1] = 0 then
+          Break;
         Inc(DataOffset, HeaderPage.var_data[DataOffset + 1] + 2);
-        if DataOffset > HeaderPage.fix_data.hdr_page_size - SizeOf(HeaderPage.fix_data) then raise EGDBError.Create('Continuation');
+        if DataOffset > HeaderPage.fix_data.hdr_page_size -
+          SizeOf(HeaderPage.fix_data) then
+          raise EGDBError.Create('Continuation');
       end;
       FilenameSize := HeaderPage.var_data[DataOffset + 1];
-      NewFile.Filename := CurrentFileName;
+      NewFile.Filename := CurrentFilename;
       SetLength(NewFile.ContinuationFile, FilenameSize);
       if FilenameSize > 0 then
-        Move(HeaderPage.var_data[DataOffset + 2], NewFile.ContinuationFile[1], FilenameSize);
+        Move(HeaderPage.var_data[DataOffset + 2], NewFile.ContinuationFile[1],
+          FilenameSize);
       NewFile.FirstLogicalPage := StartPage;
-      Move(HeaderPage.var_data[DataOffset + FilenameSize + 4], NewFile.LastLogicalPage, SizeOf(LongWord));
+      Move(HeaderPage.var_data[DataOffset + FilenameSize + 4],
+        NewFile.LastLogicalPage, SizeOf(LongWord));
       NewFile.TotalPages := NewFile.LastLogicalPage - NewFile.FirstLogicalPage;
       Inc(StartPage, NewFile.TotalPages);
       FList.Add(NewFile);
@@ -245,6 +228,6 @@ end;
 function TGDBInfo.GetItem(I: Integer): TGDBFileInfo;
 begin
   Result := PGDBFile(FList[I])^;
-end;  
-          
+end;
+
 end.

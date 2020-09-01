@@ -1,9 +1,9 @@
 object frmMain: TfrmMain
   Left = 445
   Top = 95
-  Width = 1130
-  Height = 803
   Caption = 'Repare Firebird DB'
+  ClientHeight = 764
+  ClientWidth = 1114
   Color = clBtnFace
   Font.Charset = RUSSIAN_CHARSET
   Font.Color = clWindowText
@@ -5071,6 +5071,7 @@ object frmMain: TfrmMain
     0000C0030000E0070000F0030000F0010000E0010000E1010000C3830000E7C7
     0000FFE70000}
   OldCreateOrder = False
+  Position = poScreenCenter
   OnClose = FormClose
   OnShow = FormShow
   DesignSize = (
@@ -5119,70 +5120,43 @@ object frmMain: TfrmMain
     Height = 41
     Align = alTop
     TabOrder = 1
-    object lbAll: TLabel
-      Left = 712
-      Top = 8
-      Width = 19
-      Height = 13
-      Caption = 'lbAll'
-    end
-    object lb1: TLabel
-      Left = 680
-      Top = 8
-      Width = 4
-      Height = 13
-      Caption = '\'
-    end
-    object lbCurr: TLabel
-      Left = 624
-      Top = 8
-      Width = 29
-      Height = 13
-      Caption = 'lbCurr'
-    end
     object btnOpen: TButton
       Left = 8
-      Top = 8
+      Top = 10
       Width = 75
       Height = 25
       Caption = 'OpenDB'
       TabOrder = 0
       OnClick = btnOpenClick
     end
-    object btnCheck: TButton
-      Left = 88
-      Top = 8
-      Width = 75
-      Height = 25
-      Caption = 'Check'
-      TabOrder = 1
-      OnClick = btnCheckClick
-    end
     object btnGetData: TButton
-      Left = 168
-      Top = 8
+      Left = 89
+      Top = 10
       Width = 75
       Height = 25
       Caption = 'GetData'
-      TabOrder = 2
+      Enabled = False
+      TabOrder = 1
       OnClick = btnGetDataClick
     end
     object btnPIP: TButton
-      Left = 248
-      Top = 8
+      Left = 170
+      Top = 10
       Width = 75
       Height = 25
       Caption = 'btnPIP'
-      TabOrder = 3
+      Enabled = False
+      TabOrder = 2
       OnClick = btnPIPClick
     end
     object btnClearDB: TButton
-      Left = 328
-      Top = 8
+      Left = 251
+      Top = 10
       Width = 75
       Height = 25
       Caption = 'ReleaseDB'
-      TabOrder = 4
+      Enabled = False
+      TabOrder = 3
       OnClick = btnClearDBClick
     end
   end
@@ -5266,7 +5240,7 @@ object frmMain: TfrmMain
       Top = 309
       Width = 495
       Height = 337
-      ActivePage = tsGenerateNewPage
+      ActivePage = tsWorkPages
       Align = alBottom
       Anchors = [akLeft, akTop, akRight, akBottom]
       TabOrder = 1
@@ -5284,12 +5258,12 @@ object frmMain: TfrmMain
             Left = 2
             Top = 15
             Width = 483
-            Height = 58
+            Height = 52
             Align = alTop
             TabOrder = 0
             object lbl2: TLabel
               Left = 8
-              Top = 8
+              Top = 0
               Width = 156
               Height = 13
               Caption = 'Please Entrer page number:'
@@ -5301,15 +5275,15 @@ object frmMain: TfrmMain
               ParentFont = False
             end
             object edtPageNumber: TEdit
-              Left = 8
-              Top = 28
+              Left = 7
+              Top = 19
               Width = 225
               Height = 21
               TabOrder = 0
             end
             object btnSeek: TButton
               Left = 238
-              Top = 24
+              Top = 16
               Width = 75
               Height = 25
               Caption = 'Search'
@@ -5325,12 +5299,14 @@ object frmMain: TfrmMain
           end
           object grp3: TGroupBox
             Left = 2
-            Top = 73
+            Top = 67
             Width = 483
-            Height = 234
+            Height = 240
             Align = alClient
             Caption = #1055#1086#1076#1088#1086#1073#1085#1072#1103' '#1080#1085#1092#1086#1088#1084#1072#1094#1080#1103
             TabOrder = 1
+            ExplicitTop = 73
+            ExplicitHeight = 234
             object lbl3: TLabel
               Left = 8
               Top = 24
@@ -5406,7 +5382,6 @@ object frmMain: TfrmMain
               Width = 233
               Height = 21
               Style = csDropDownList
-              ItemHeight = 13
               TabOrder = 3
               Items.Strings = (
                 'HeaderPage'
@@ -5611,7 +5586,6 @@ object frmMain: TfrmMain
           Width = 337
           Height = 21
           Style = csDropDownList
-          ItemHeight = 13
           ItemIndex = 0
           TabOrder = 1
           Text = 'Page Inventory Page (TIP)'
@@ -5761,10 +5735,16 @@ object frmMain: TfrmMain
         Top = 16
         Width = 395
         Height = 21
+        Font.Charset = RUSSIAN_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -11
+        Font.Name = 'Tahoma'
+        Font.Style = []
+        ParentFont = False
         TabOrder = 0
       end
       object btnGotoPage: TButton
-        Left = 409
+        Left = 513
         Top = 13
         Width = 75
         Height = 25
@@ -5781,9 +5761,9 @@ object frmMain: TfrmMain
         TabOrder = 2
       end
       object pbDataProgress: TProgressBar
-        Left = 8
-        Top = 42
-        Width = 585
+        Left = 3
+        Top = 44
+        Width = 595
         Height = 17
         Anchors = [akLeft, akTop, akRight]
         TabOrder = 3
@@ -5839,5 +5819,9 @@ object frmMain: TfrmMain
     DataSet = dsPages
     Left = 568
     Top = 216
+  end
+  object XPManifest1: TXPManifest
+    Left = 1072
+    Top = 8
   end
 end

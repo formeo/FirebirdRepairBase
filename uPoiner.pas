@@ -2,7 +2,7 @@ unit uPoiner;
 
 interface
 
-uses uPag,Windows;
+uses uPag, Windows;
 
 const
   MAX_PAGE_SIZE = 32768;
@@ -15,23 +15,22 @@ type
   SLong = Longint;
   ULong = LongWord;
 
-Tpnr_page  =  record
+  Tpnr_page = record
     pp_header: Tpag;
-    ppg_sequence: SLONG ;
-    ppg_next: SLONG;
-    ppg_count: USHORT;
-    ppg_relation: USHORT;
-    ppg_min_space: USHORT;
-    ppg_max_space: USHORT;
+    ppg_sequence: SLong;
+    ppg_next: SLong;
+    ppg_count: UShort;
+    ppg_relation: UShort;
+    ppg_min_space: UShort;
+    ppg_max_space: UShort;
 
-end;
+  end;
 
-TPointer_page =  record
+  TPointer_page = record
     fix_data: Tpnr_page;
-    ppg_page:array[0..(MAX_PAGE_SIZE-sizeof(Tpnr_page))] of SLONG;
+    ppg_page: array [0 .. (MAX_PAGE_SIZE - sizeof(Tpnr_page))] of SLong;
   end;
 
 implementation
 
 end.
- 
