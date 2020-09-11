@@ -39,6 +39,7 @@ type
       Checksum: integer; TipeNext: integer; typePage: integer): Boolean;
     function GetHeaderFlags: string;
     procedure SetHeaderFlags(const flags: string);
+    function GetHeaderPage: THdrPage;
     property Count: integer read GetCount;
     property nameDB: string read GetNameDB;
     property Curr_page_size: integer read GetCurrPageSizeDB;
@@ -176,6 +177,19 @@ begin
     result := ResDataPage;
   finally
     FileClose(db);
+  end;
+end;
+
+function TFBDatabase.GetHeaderPage: THdrPage;
+var
+  FS: TFileStream;
+begin
+  try
+    FS := TFileStream.Create(_NameDB, fmOpenRead or fmShareDenyNone);
+    FS.Read(HeaderPage, _page_size_curr);
+    result := HeaderPage;
+  finally
+    FS.Free;
   end;
 end;
 

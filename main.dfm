@@ -5167,7 +5167,7 @@ object frmMain: TfrmMain
     Height = 647
     Align = alLeft
     TabOrder = 2
-    object grp1: TGroupBox
+    object grpProcess: TGroupBox
       Left = 1
       Top = 1
       Width = 495
@@ -5305,8 +5305,6 @@ object frmMain: TfrmMain
             Align = alClient
             Caption = #1055#1086#1076#1088#1086#1073#1085#1072#1103' '#1080#1085#1092#1086#1088#1084#1072#1094#1080#1103
             TabOrder = 1
-            ExplicitTop = 73
-            ExplicitHeight = 234
             object lbl3: TLabel
               Left = 8
               Top = 24
@@ -5637,8 +5635,8 @@ object frmMain: TfrmMain
       end>
   end
   object dGridPages: TDBGrid
-    Left = 504
-    Top = 104
+    Left = 503
+    Top = 105
     Width = 609
     Height = 297
     Anchors = [akLeft, akTop, akRight, akBottom]
@@ -5692,6 +5690,11 @@ object frmMain: TfrmMain
         Title.Font.Name = 'Tahoma'
         Title.Font.Style = [fsBold]
         Visible = True
+      end
+      item
+        Expanded = False
+        FieldName = 'Relation'
+        Visible = True
       end>
   end
   object dNvgNav: TDBNavigator
@@ -5733,7 +5736,7 @@ object frmMain: TfrmMain
       object edtNPage: TEdit
         Left = 5
         Top = 16
-        Width = 395
+        Width = 431
         Height = 21
         Font.Charset = RUSSIAN_CHARSET
         Font.Color = clWindowText
@@ -5744,7 +5747,7 @@ object frmMain: TfrmMain
         TabOrder = 0
       end
       object btnGotoPage: TButton
-        Left = 513
+        Left = 442
         Top = 13
         Width = 75
         Height = 25
@@ -5767,6 +5770,14 @@ object frmMain: TfrmMain
         Height = 17
         Anchors = [akLeft, akTop, akRight]
         TabOrder = 3
+      end
+      object btnStopSearch: TButton
+        Left = 523
+        Top = 13
+        Width = 75
+        Height = 25
+        Caption = 'Stop'
+        TabOrder = 4
       end
     end
   end
@@ -5800,7 +5811,7 @@ object frmMain: TfrmMain
     Aggregates = <>
     Params = <>
     Left = 528
-    Top = 216
+    Top = 240
     object fPageNumber: TLargeintField
       FieldName = 'PageNumber'
     end
@@ -5812,16 +5823,16 @@ object frmMain: TfrmMain
       FieldName = 'Type Page Number'
     end
     object fCheckSum: TIntegerField
+      DisplayLabel = 'Checksum'
       FieldName = 'checksum'
+    end
+    object dsPagesRelation: TIntegerField
+      FieldName = 'Relation'
     end
   end
   object dsDataPages: TDataSource
     DataSet = dsPages
-    Left = 568
-    Top = 216
-  end
-  object XPManifest1: TXPManifest
-    Left = 1072
-    Top = 8
+    Left = 528
+    Top = 304
   end
 end

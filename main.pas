@@ -36,7 +36,7 @@ type
     pnl5: TPanel;
     btnOpen: TButton;
     pnl6: TPanel;
-    grp1: TGroupBox;
+    grpProcess: TGroupBox;
     spl1: TSplitter;
     pnl2: TPanel;
     lstLog: TListBox;
@@ -97,7 +97,8 @@ type
     lb4: TLabel;
     sePosition: TSpinEdit;
     lbresult: TLabel;
-    XPManifest1: TXPManifest;
+    btnStopSearch: TButton;
+    dsPagesRelation: TIntegerField;
     procedure btnOpenClick(Sender: TObject);
     procedure mniN1Click(Sender: TObject);
     procedure btnSeekClick(Sender: TObject);
@@ -356,6 +357,7 @@ begin
   btnSeek.Enabled := False
 end;
 
+
 procedure TfrmMain.checkDB;
 var
   FS: TFileStream;
@@ -370,12 +372,17 @@ var
   CountGeneratorPage: integer;
   CountWriteAheadLogPage: integer;
   CountUnknownPage: integer;
+  CountRelations: integer;
   NumRead, i: integer;
   pages: tippage;
   DataPage: TDataPage;
+  Relations: TStringList;
 begin
   if not Assigned(RDatabase) then
     exit;
+  Relations := TStringList.Create;
+  Relations.Sorted := True;
+  Relations.Duplicates := dupIgnore;
   lstLog.Items.Clear;
   dsPages.Close;
   lstLog.Items.Add('Data base: ' + RDatabase.NameDB);
@@ -396,6 +403,7 @@ begin
   CountGeneratorPage := 0;
   CountWriteAheadLogPage := 0;
   CountUnknownPage := 0;
+  CountRelations := 0;
   pbDetectedPage.Min := 0;
   pbDetectedPage.Max := Round(RDatabase.DBFileSize / RDatabase.Curr_page_size);
   pbDetectedPage.Position := 1;
@@ -415,6 +423,7 @@ begin
           dsPages.Fields[3].AsInteger :=
             DataPage.fix_data.pagHdr_Header.pag_checksum;
           dsPages.Post;
+          lstLog.Items.Add('First pointer page number: '+inttostr(RDatabase.GetHeaderPage.fix_data.hdr_pages));
         end;
       2:
         begin
@@ -462,6 +471,8 @@ begin
             DataPage.fix_data.pagHdr_Header.pag_type;
           dsPages.Fields[3].AsInteger :=
             DataPage.fix_data.pagHdr_Header.pag_checksum;
+          dsPages.Fields[4].AsInteger := DataPage.fix_data.dpg_relation;
+          Relations.Add(intTostr(DataPage.fix_data.dpg_relation));
           dsPages.Post;
         end;
       6:
@@ -550,7 +561,8 @@ begin
   lstLog.Items.Add('Count Write Ahead Log Pages ' +
     IntToStr(CountWriteAheadLogPage));
   lstLog.Items.Add('Count Unknown Pages ' + IntToStr(CountUnknownPage));
-
+  lstLog.Items.Add('Count Relations ' + IntToStr(Relations.Count));
+  FreeAndNil(Relations)
 end;
 
 procedure TfrmMain.FormShow(Sender: TObject);
@@ -643,24 +655,27 @@ begin
       'Information', MB_OK + MB_ICONWARNING);
     exit;
   end;
-  btnGotoPage.Enabled := False;
-  DataPage := RDatabase.GetDataPage(StrToIntDef(edtNPage.text, 0));
-  pbDataProgress.Min := 0;
-  pbDataProgress.Max := length(DataPage.dpg_repeat) - 1;
-  ShowMessage(IntToStr(length(DataPage.dpg_repeat)));
+  try
+    btnGotoPage.Enabled := False;
+    DataPage := RDatabase.GetDataPage(StrToIntDef(edtNPage.text, 0));
+    pbDataProgress.Min := 0;
+    pbDataProgress.Max := length(DataPage.dpg_repeat) - 1;
 
-  // for i := 0 to length(DataPage.dpg_repeat)-1 do
-  // begin
-  // pbDataProgress.Position:=pbDataProgress.Position+1;
-  // // mmoData.Text:=  mmoData.Text+' '+  StrToInt('$'+ByteToHex(DataPage.dpg_repeat[i].dpg_offset));
-  // Application.ProcessMessages;
-  //
-  // // mmoData.Text:=  mmoData.Text+' '+ByteToHex(DataPage.rhd_data[i]) ;
-  // mmoData.Text:=  mmoData.Text+' '+Chr(StrToInt('$'+ByteToHex(DataPage.dpg_repeat[i].dpg_offset))) ;
-  // {lstData.Items.Add(ByteToHex(DataData.rhd_data[i]));
-  // lstData.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));}
-  //
-  // end;
+     for i := 0 to length(DataPage.dpg_repeat)-1 do
+     begin
+       pbDataProgress.Position:=pbDataProgress.Position+1;
+       // mmoData.Text:=  mmoData.Text+' '+  StrToInt('$'+ByteToHex(DataPage.dpg_repeat[i].dpg_offset));
+       Application.ProcessMessages;
+
+       // mmoData.Text:=  mmoData.Text+' '+ByteToHex(DataPage.rhd_data[i]) ;
+       mmoData.Text:=  mmoData.Text+' '+Chr(StrToInt('$'+ByteToHex(DataPage.dpg_repeat[i].dpg_offset))) ;
+       {lstData.Items.Add(ByteToHex(DataData.rhd_data[i]));
+       lstData.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));}
+
+     end;
+  finally
+   btnGotoPage.Enabled := True;
+  end;
 end;
 
 end.
