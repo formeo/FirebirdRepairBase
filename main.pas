@@ -5,9 +5,9 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, FileCtrl, ComCtrls, uStructs, DB, ExtCtrls,
-  Menus, uCommon, uDatabase, XPMan, uDataPage, Grids, DBGrids, DBClient,
+  Menus, uCommon,  XPMan, uDataPage, Grids, DBGrids, DBClient,
   DBCtrls, Spin, Vcl.Buttons,
-  uPageAnalyzer, uDatabaseStats, uFlagManager;
+  uPageAnalyzer, uDatabaseStats, uFlagManager, StrUtils;
 
 type
   TfrmMain = class(TForm)
@@ -200,6 +200,7 @@ var
   PageInfo: TPageInfo;
   NewPageBuffer: TBytes;
   FileStream: TFileStream;
+  ModifiedHeader: TPag; // --- ДОБАВЛЕНО ---
 begin
   // ReWriting page - ВНИМАНИЕ: Это ОПАСНАЯ операция!
   if Application.MessageBox('Do You Want to Rewrite Database Page? THIS IS DANGEROUS!',
@@ -214,10 +215,18 @@ begin
       PageInfo := FPageAnalyzer.GetPageInfo(PageNum);
       NewPageBuffer := Copy(PageInfo.Buffer); // Копируем текущий буфер
 
-      // Модифицируем заголовок в буфере
-      TPag(NewPageBuffer[0]).pag_checksum := UShort(NewChecksum);
+      // --- ИСПРАВЛЕНИЕ: Используем Move для безопасного копирования и изменения заголовка ---
+      // Скопируем стандартный заголовок из буфера в локальную переменную
+      Move(NewPageBuffer[0], ModifiedHeader, SizeOf(TPag));
+
+      // Изменим поля в локальной переменной
+      ModifiedHeader.pag_checksum := UShort(NewChecksum);
       if (NewType >= 0) and (NewType <= $FF) then // Проверяем диапазон
-        TPag(NewPageBuffer[0]).pag_type := SChar(NewType);
+        ModifiedHeader.pag_type := SChar(NewType);
+
+      // Скопируем изменённую локальную переменную обратно в буфер
+      Move(ModifiedHeader, NewPageBuffer[0], SizeOf(TPag));
+      // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
 
       // Записываем изменённый буфер обратно в файл
       FileStream := TFileStream.Create(FPageAnalyzer.FileName, fmOpenReadWrite or fmShareExclusive);
@@ -290,8 +299,7 @@ begin
   try
     Flags := FFlagManager.GetFlags;
 
-    // Формируем строку для отображения (например, бинарное представление или просто список)
-    // Для простоты, выведем список активных флагов
+
     edtFlags.text := 'Active flags: ';
     if Flags.ActiveShadow then edtFlags.text := edtFlags.text + 'ActiveShadow, ';
     if Flags.ForceWrite then edtFlags.text := edtFlags.text + 'ForceWrite, ';
@@ -299,11 +307,11 @@ begin
     if Flags.NoReserve then edtFlags.text := edtFlags.text + 'NoReserve, ';
     if Flags.SqlDialect3 then edtFlags.text := edtFlags.text + 'SqlDialect3, ';
     if Flags.ReadOnly then edtFlags.text := edtFlags.text + 'ReadOnly, ';
-    // Убираем последнюю запятую
-    if edtFlags.text.EndsWith(', ') then
-      edtFlags.text := edtFlags.text.Remove(edtFlags.text.Length - 2);
 
-    // Или можно вывести все флаги с указанием статуса
+    if EndsStr(', ', edtFlags.text) then // Используем EndsStr из StrUtils
+      edtFlags.text := Copy(edtFlags.text, 1, Length(edtFlags.text) - 2); // Удаляем последние 2 символа
+
+
     lstDBFlags.Items.Add(Format('Active Shadow: %s', [BoolToStr(Flags.ActiveShadow, True)]));
     lstDBFlags.Items.Add(Format('Force Write: %s', [BoolToStr(Flags.ForceWrite, True)]));
     lstDBFlags.Items.Add(Format('No Checksums: %s', [BoolToStr(Flags.NoChecksums, True)]));
@@ -348,20 +356,20 @@ begin
     lstLog.Items.Add('Database page size: ' + IntToStr(FPageAnalyzer.PageSize));
     lstLog.Items.Add('Scanning pages...');
 
-    // Вычисляем статистику через FDatabaseStats
+
     FDatabaseStats.CalculateStats;
 
-    // Получаем результаты
+
     PageStats := FDatabaseStats.PageStats;
     TxStats := FDatabaseStats.TransactionStats;
     RelStats := FDatabaseStats.RelationStats;
 
-    // Обновляем прогресс бар (для наглядности, хотя теперь это быстро)
+
     pbDetectedPage.Min := 0;
-    pbDetectedPage.Max := 100; // Условно
+    pbDetectedPage.Max := 100;
     pbDetectedPage.Position := 100;
 
-    // Выводим результаты подсчета
+
     lstLog.Items.Add('--- Page Type Summary ---');
     lstLog.Items.Add('Count Header Pages: ' + IntToStr(PageStats.HeaderPages));
     lstLog.Items.Add('Count Page Inventory Pages (PIP): ' + IntToStr(PageStats.PipPages));
@@ -369,7 +377,7 @@ begin
     lstLog.Items.Add('Count Pointer Pages: ' + IntToStr(PageStats.PointerPages));
     lstLog.Items.Add('Count Data Pages: ' + IntToStr(PageStats.DataPages));
     lstLog.Items.Add('Count Index Root Pages: ' + IntToStr(PageStats.IndexRootPages));
-    lstLog.Items.Add('Count Index B-Tree Pages: ' + IntToStr(PageStats.IndexBtreePages)); // Исправлено
+    lstLog.Items.Add('Count Index B-Tree Pages: ' + IntToStr(PageStats.IndexBtreePages));
     lstLog.Items.Add('Count Blob Pages: ' + IntToStr(PageStats.BlobPages));
     lstLog.Items.Add('Count Generator Pages: ' + IntToStr(PageStats.GeneratorPages));
     lstLog.Items.Add('Count Write Ahead Log Pages: ' + IntToStr(PageStats.WalPages));
@@ -415,12 +423,10 @@ begin
   try
     NewFlags := FFlagManager.GetFlags;
 
-    // Обновляем флаги в соответствии с чекбоксами
+
     NewFlags.ForceWrite := chkSetFW.Checked;
     NewFlags.ReadOnly := chkReadOnly.Checked;
-    // Добавьте другие флаги по необходимости
 
-    // Устанавливаем флаги через FFlagManager
     FFlagManager.SetFlags(NewFlags);
 
     Application.MessageBox('Header flags updated!', 'Information', MB_OK + MB_ICONINFORMATION);
@@ -452,14 +458,14 @@ begin
   end;
 end;
 
-// tsFlagsShow - теперь использует UpdateFlagCheckboxesFromManager
+
 procedure TfrmMain.tsFlagsShow(Sender: TObject);
 begin
-  // Обновляем чекбоксы при показе вкладки
+
   UpdateFlagCheckboxesFromManager;
 end;
 
-// pgcServicesChange - обновляет MaxValue для sePosition
+
 procedure TfrmMain.pgcServicesChange(Sender: TObject);
 begin
   if tsGenerateNewPage.Showing then
@@ -513,15 +519,13 @@ begin
     end;
 
     btnGotoPage.Enabled := False;
-    mmoData.Clear; // Очищаем Memo перед выводом
-
-    // Используем функцию из uDataPage для извлечения фрагментов
+    mmoData.Clear;
     PageFragments := ExtractDataFragments(PageInfo.Buffer, PageInfo.Size);
 
     pbDataProgress.Min := 0;
-    pbDataProgress.Max := Length(PageFragments) - 1; // Количество фрагментов
+    pbDataProgress.Max := Length(PageFragments) - 1;
 
-    for i := 0 to High(PageFragments) do // Используем High для массива
+    for i := 0 to High(PageFragments) do
     begin
       pbDataProgress.Position := i;
       mmoData.Lines.Add('Fragment ' + IntToStr(i) + ', Offset: ' + IntToStr(PageFragments[i].Offset));

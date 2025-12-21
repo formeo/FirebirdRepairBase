@@ -162,23 +162,27 @@ procedure TDatabaseStats.CalculateRelationStats;
 var
   PageNum: ULong;
   PageInfo: TPageInfo;
-  DataPageHeader: TData_Page_Fixed_Part;
+  DataPageHeader: TData_Page_Fixed_Part; // Тип из uDataPage
   Fragments: TRecordFragmentsArray;
   FoundRelation: Boolean;
   i, j: Integer;
 begin
-  SetLength(FRelationStats, 0);
+  // Инициализируем массив статистики по отношениям
+  SetLength(FRelationStats, 0); // Пока пустой
 
   for PageNum := 0 to FPageAnalyzer.GetLastPageNumber do
   begin
     PageInfo := FPageAnalyzer.GetPageInfo(PageNum);
-    if PageInfo.Header.pag_type = pag_data then
+    if PageInfo.Header.pag_type = pag_data then // pag_data = $05
     begin
+      // Проверяем, достаточно ли данных для фиксированной части заголовка Data Page
       if Length(PageInfo.Buffer) >= SizeOf(TData_Page_Fixed_Part) then
       begin
-        DataPageHeader := TData_Page_Fixed_Part(PageInfo.Buffer[0]);
+        // --- ИСПРАВЛЕНИЕ: Используем Move вместо прямого приведения типа ---
+        Move(PageInfo.Buffer[0], DataPageHeader, SizeOf(TData_Page_Fixed_Part));
         var RelationID := DataPageHeader.dpg_relation;
 
+        // Найдем индекс для этого RelationID в массиве статистики
         FoundRelation := False;
         for j := 0 to High(FRelationStats) do
         begin
@@ -190,23 +194,24 @@ begin
           end;
         end;
 
-
+        // Если отношения не было в массиве, добавим его
         if not FoundRelation then
         begin
           SetLength(FRelationStats, Length(FRelationStats) + 1);
           FRelationStats[High(FRelationStats)].RelationID := RelationID;
           FRelationStats[High(FRelationStats)].PageCount := 1;
-          FRelationStats[High(FRelationStats)].RecordCount := 0;
+          FRelationStats[High(FRelationStats)].RecordCount := 0; // Пока 0
         end;
 
-
-        Fragments := ExtractDataFragments(PageInfo.Buffer, PageInfo.Size);
-
+        // Пример: подсчет записей (фрагментов) на странице
+        // Извлекаем фрагменты
+        Fragments := ExtractDataFragments(PageInfo.Buffer, PageInfo.Size); // ExtractDataFragments из uDataPage
+        // Найдем индекс отношения снова для обновления RecordCount
         for j := 0 to High(FRelationStats) do
         begin
           if FRelationStats[j].RelationID = RelationID then
           begin
-            Inc(FRelationStats[j].RecordCount, Length(Fragments));
+            Inc(FRelationStats[j].RecordCount, Length(Fragments)); // Прибавляем количество фрагментов
             Break;
           end;
         end;
@@ -214,6 +219,7 @@ begin
     end;
   end;
 end;
+
 
 procedure TDatabaseStats.CalculateStats;
 begin

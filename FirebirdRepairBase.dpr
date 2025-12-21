@@ -15,7 +15,8 @@ uses
   uPageAnalyzer in 'uPageAnalyzer.pas',
   uBtreePage in 'uBtreePage.pas',
   uDatabaseStats in 'uDatabaseStats.pas',
-  uFlagManager in 'uFlagManager.pas';
+  uFlagManager in 'uFlagManager.pas',
+  uRecordParser in 'uRecordParser.pas';
 
 {$R *.res}
 
