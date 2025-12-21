@@ -2,7 +2,7 @@ unit uGenPage;
 
 interface
 
-uses uPag, Windows;
+uses uStructs, Windows;
 
 const
   MAX_PAGE_SIZE = 32768;
@@ -17,14 +17,12 @@ type
 
   TGenerator_page = record
     gpg_header: TPag;
-    gpg_sequence: ULong; // Sequence number
-    // Generator vector
+    gpg_sequence: ULong;
   end;
 
   Tgnrtr_page = record
-    fix_data1: TGenerator_page; // Sequence number
+    fix_data1: TGenerator_page;
     gpg_values: array [0 .. (MAX_PAGE_SIZE - sizeof(TGenerator_page))] of Int64;
-    // Generator vector
   end;
 
 implementation

@@ -5070,14 +5070,12 @@ object frmMain: TfrmMain
     000000000000FFF300000FE30000018200000004000000080000001000008021
     0000C0030000E0070000F0030000F0010000E0010000E1010000C3830000E7C7
     0000FFE70000}
-  OldCreateOrder = False
   Position = poScreenCenter
   OnClose = FormClose
   OnShow = FormShow
   DesignSize = (
     1114
     764)
-  PixelsPerInch = 96
   TextHeight = 13
   object pnl1: TPanel
     Left = 0

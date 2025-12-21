@@ -4,25 +4,10 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, StdCtrls, FileCtrl, ComCtrls, struck, DB, ExtCtrls,
+  Dialogs, StdCtrls, FileCtrl, ComCtrls, uStructs, DB, ExtCtrls,
   Menus, uCommon, uDatabase, XPMan, uDataPage, Grids, DBGrids, DBClient,
-  DBCtrls, Spin;
-
-type
-  PDpg_repeat = ^TDpg_rpt;
-
-  trhd1 = record
-    rhd_transaction: SLONG;
-    rhd_b_page: SLONG;
-    rhd_b_line: USHORT;
-    rhd_flags: USHORT;
-    rhd_format: UCHAR;
-  end;
-
-  Trhd_page = record
-    fix_data: trhd1;
-    rhd_data: array [0 .. (MAX_PAGE_SIZE - sizeof(trhd1))] of UCHAR;
-  end;
+  DBCtrls, Spin, Vcl.Buttons,
+  uPageAnalyzer, uDatabaseStats, uFlagManager;
 
 type
   TfrmMain = class(TForm)
@@ -116,21 +101,20 @@ type
     procedure btnGotoPageClick(Sender: TObject);
 
   private
-    { Private declarations }
+    FPageAnalyzer: TPageAnalyzer;
+    FDatabaseStats: TDatabaseStats;
+    FFlagManager: TFlagManager;
+    FCurrentDBFileName: string;
     procedure clearUserGui;
     procedure checkDB;
+    procedure UpdateFlagCheckboxesFromManager;
   public
   end;
 
 var
   frmMain: TfrmMain;
-  new_header_page: THdrPage;
-  page_size_curr: integer;
-  RDatabase: TFBDatabase;
 
 implementation
-
-uses uPag;
 
 {$R *.dfm}
 
@@ -138,14 +122,32 @@ procedure TfrmMain.btnOpenClick(Sender: TObject);
 begin
   if dlgOpenDB.Execute then
   begin
-    RDatabase := TFBDatabase.Create(dlgOpenDB.FileName);
-    lbNameDB.Caption := RDatabase.NameDB;
-    btnOpen.Enabled := False;
-    checkDB;
+    // Освобождаем предыдущую БД, если была
+    btnClearDBClick(Sender); // Вызовем старую логику очистки
+
+    try
+      // Создаем анализатор
+      FPageAnalyzer := TPageAnalyzer.Create(dlgOpenDB.FileName);
+      // Создаем статистик
+      FDatabaseStats := TDatabaseStats.Create(FPageAnalyzer);
+      // Создаем менеджер флагов
+      FFlagManager := TFlagManager.Create(dlgOpenDB.FileName);
+      // Сохраняем имя файла
+      FCurrentDBFileName := dlgOpenDB.FileName;
+
+      lbNameDB.Caption := FPageAnalyzer.FileName;
+      btnOpen.Enabled := False;
+      clearUserGui; // Очищаем UI перед анализом
+      checkDB; // Запускаем анализ через FDatabaseStats
+    except
+      on E: Exception do
+      begin
+        btnClearDBClick(Sender); // Очищаем, если возникла ошибка
+        raise; // Повторно выбрасываем исключение
+      end;
+    end;
   end;
 end;
-
-
 
 procedure TfrmMain.mniN1Click(Sender: TObject);
 begin
@@ -155,197 +157,166 @@ end;
 
 procedure TfrmMain.btnSeekClick(Sender: TObject);
 var
-  TypePage: integer;
+  PageNum: Int64;
+  PageInfo: TPageInfo;
 begin
+  // Блокируем элементы на время операции
   edtPageNumber.Enabled := False;
   btnSeek.Enabled := False;
   cbbTypePage.Enabled := False;
   edtCheckSum.Enabled := False;
   btnReWrite.Enabled := False;
 
-  TypePage := RDatabase.typeCurrPage(StrToIntDef(edtPageNumber.text, 0));
-  if TypePage <= 0 then
-    cbbTypePage.text := 'Unknown'
-  else
-    cbbTypePage.ItemIndex := TypePage - 1;
-  edtCheckSum.text :=
-    IntToStr(RDatabase.typePageChecksum(StrToIntDef(edtPageNumber.text, 0)));
+  try
+    PageNum := StrToIntDef(edtPageNumber.text, 0);
+    // Проверяем, в пределах ли номер страницы
+    if (PageNum < 0) or (PageNum > FPageAnalyzer.GetLastPageNumber) then
+    begin
+      cbbTypePage.text := 'Unknown (Out of bounds)';
+      edtCheckSum.text := 'N/A';
+      Exit;
+    end;
 
-  edtPageNumber.Enabled := true;
-  btnSeek.Enabled := true;
-  cbbTypePage.Enabled := true;
-  edtCheckSum.Enabled := true;
-  btnReWrite.Enabled := true;
+    PageInfo := FPageAnalyzer.GetPageInfo(PageNum);
+
+    cbbTypePage.text := PageInfo.TypeStr;
+    edtCheckSum.text := IntToStr(PageInfo.Header.pag_checksum);
+
+  finally
+    // Восстанавливаем доступность элементов
+    edtPageNumber.Enabled := true;
+    btnSeek.Enabled := true;
+    cbbTypePage.Enabled := true;
+    edtCheckSum.Enabled := true;
+    btnReWrite.Enabled := true;
+  end;
 end;
 
 procedure TfrmMain.btnReWriteClick(Sender: TObject);
 var
-  TypePage: ShortInt;
-
+  PageNum: Int64;
+  NewChecksum: Integer;
+  NewType: Integer;
+  PageInfo: TPageInfo;
+  NewPageBuffer: TBytes;
+  FileStream: TFileStream;
 begin
-  // ReWriting page
-  if Application.MessageBox('Do You Want to Rewrite Database Page?',
+  // ReWriting page - ВНИМАНИЕ: Это ОПАСНАЯ операция!
+  if Application.MessageBox('Do You Want to Rewrite Database Page? THIS IS DANGEROUS!',
     'ReWriting Page', MB_OKCANCEL + MB_ICONQUESTION) = 6 then
   begin
-    TypePage := RDatabase.typeCurrPage(StrToIntDef(edtPageNumber.text, 0));
-    if RDatabase.ReWritePage(TypePage, StrToIntDef(edtPageNumber.text, 0),
-      StrToIntDef(edtCheckSum.text, 12345), StrToIntDef(edtNextTip.text, 0),
-      cbbTypePage.ItemIndex - 1) then
-      Application.MessageBox('Data ReWrited!', 'Information',
-        MB_OK + MB_ICONWARNING)
-    else
-      Application.MessageBox('Data Does Not ReWrited!', 'Information',
-        MB_OK + MB_ICONERROR);
+    PageNum := StrToIntDef(edtPageNumber.text, 0);
+    NewChecksum := StrToIntDef(edtCheckSum.text, 12345);
+    NewType := cbbTypePage.ItemIndex - 1; // Или как-то иначе, в зависимости от cbbTypePage
+
+    try
+      // Получаем текущую страницу
+      PageInfo := FPageAnalyzer.GetPageInfo(PageNum);
+      NewPageBuffer := Copy(PageInfo.Buffer); // Копируем текущий буфер
+
+      // Модифицируем заголовок в буфере
+      TPag(NewPageBuffer[0]).pag_checksum := UShort(NewChecksum);
+      if (NewType >= 0) and (NewType <= $FF) then // Проверяем диапазон
+        TPag(NewPageBuffer[0]).pag_type := SChar(NewType);
+
+      // Записываем изменённый буфер обратно в файл
+      FileStream := TFileStream.Create(FPageAnalyzer.FileName, fmOpenReadWrite or fmShareExclusive);
+      try
+        FileStream.Seek(PageNum * FPageAnalyzer.PageSize, soFromBeginning);
+        if FileStream.Write(NewPageBuffer[0], FPageAnalyzer.PageSize) <> FPageAnalyzer.PageSize then
+          raise Exception.Create('Error writing page.');
+      finally
+        FileStream.Free;
+      end;
+
+      Application.MessageBox('Page ReWritten!', 'Information', MB_OK + MB_ICONWARNING);
+    except
+      on E: Exception do
+      begin
+        Application.MessageBox(PChar('Error rewriting page: ' + E.Message), 'Error', MB_OK + MB_ICONERROR);
+      end;
+    end;
   end
 end;
 
+// btnGetDataClick: оставлен пустым или с комментарием, как и раньше
 procedure TfrmMain.btnGetDataClick(Sender: TObject);
-var
-  i, DB, pCurrSize: integer;
-  DataData: TDataPage;
 begin
-  { pCurrSize:=getCurrPageSize(dlgOpenDB.FileName);
-    try
-    db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
-    fileseek(db, 0, 0);
-    fileseek(db, 745754*pCurrSize, 0);
-    i := fileread(db, DataData,pCurrSize);
-
-    finally
-    FileClose(db );
-    end;
-    pbData.Min:=0;
-    pbData.Max:=length(DataData.dpg_repeat)-1;
-    for i :=0 to length(DataData.dpg_repeat)-1
-    do
-    begin
-    pbData.Position:=pbData.Position+1;
-    // mmoData.Text:=  mmoData.Text+' '+  Chr(StrToInt('$'+ByteToHex(DataData.dpg_repeat[i])));
-    Application.ProcessMessages;
-    // lstData.Items.Add(ByteToHex(DataData.rhd_data[i]));
-    // lstData.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));
-    end;
-    ShowMessage('Finished'); }
+  // Эта функция требует доработки или удаления
+  // Может быть использована для вывода сырых байтов страницы
+  lstLog.Items.Add('btnGetDataClick: Not implemented.');
 end;
 
+// btnPIPClick: оставлен пустым или с комментарием, как и раньше
 procedure TfrmMain.btnPIPClick(Sender: TObject);
-var
-  FS: TFileStream;
-  HeaderPage: THdrPage;
-  DB, firstPointerPage, i: integer;
-  pPage: TPointer_page;
-  DPage: TPointer_page;
-  pCurrSize: integer;
-  DataData: TDataPage;
-  DataData2: Trhd_page;
 begin
-  { firstPointerPage:=-1;
-    pCurrSize:=getCurrPageSize(dlgOpenDB.FileName);
-    try
-    FS := TFileStream.Create(dlgOpenDB.FileName, fmOpenRead or fmShareDenyNone);
-    FS.Read(HeaderPage, pCurrSize);
-    finally
-    FS.Free;
-    end;
-    firstPointerPage:= HeaderPage.fix_data.hdr_pages;
-    try
-    db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
-    fileseek(db, 0, 0);
-    fileseek(db, firstPointerPage*pCurrSize, 0);
-    i := fileread(db, pPage, pCurrSize);
-    finally
-    FileClose(db );
-    end;
-
-    lstLog.Items.Add('Readed pointer Page ');
-    lstLog.Items.Add('RDB$PAGES состоит из  '+inttostr(pPage.fix_data.ppg_count) + ' страниц' );
-
-    try
-    db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
-    fileseek(db, 0, 0);
-    fileseek(db, (5*pCurrSize), 0);
-    i := fileread(db, DataData, pCurrSize);
-    finally
-    FileClose(db);
-    end;
-
-    try
-    db := fileopen(dlgOpenDB.FileName, fmOpenReadWrite + fmShareExclusive);
-    fileseek(db, 0, 0);
-    fileseek(db, (1878*pCurrSize)+4524, 0);
-    i := fileread(db, DataData2, 28);
-    finally
-    FileClose(db);
-    end;
-    pbData.Min:=0;
-    pbData.Max:=length(DataData2.rhd_data)-1;
-    for i :=0 to length(DataData2.rhd_data)-1
-    do
-    begin
-    pbData.Position:=pbData.Position+1;
-    mmoData.Text:=  mmoData.Text+' '+  Chr(StrToInt('$'+ByteToHex(DataData2.rhd_data[i])));
-    Application.ProcessMessages;
-    // lstData.Items.Add(ByteToHex(DataData.rhd_data[i]));
-    // lstData.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));
-    end;
-    ShowMessage('Finished');
-    { /* for i :=0 to 100
-    do
-    begin
-    lstLog.Items.Add(ByteToHex(DataData.rhd_data[i]));
-    lstLog.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));
-    end;  */ }
-
+  // Эта функция требует доработки или удаления
+  lstLog.Items.Add('btnPIPClick: Not implemented.');
 end;
 
 procedure TfrmMain.btnClearDBClick(Sender: TObject);
 begin
-  if Assigned(RDatabase) then
-    RDatabase.Free;
+  // Освобождаем ресурсы
+  FPageAnalyzer.Free;
+  FDatabaseStats.Free;
+  FFlagManager.Free;
+  FPageAnalyzer := nil;
+  FDatabaseStats := nil;
+  FFlagManager := nil;
+  FCurrentDBFileName := '';
+
   btnOpen.Enabled := true;
+  clearUserGui;
 end;
 
 procedure TfrmMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  if Assigned(RDatabase) then
-    RDatabase.Free;
+  btnClearDBClick(Sender); // Очищаем ресурсы при закрытии формы
 end;
 
 procedure TfrmMain.btnGetHeaderFlagsClick(Sender: TObject);
 var
-  i: integer;
+  Flags: TDatabaseFlags;
 begin
-  // Hdr_flags: Two bytes, unsigned. Bytes 0x2a and 0x2b on the page. The database flags.
-  // lstPages.Items.Clear;
-  edtFlags.text := '';
-  edtFlags.text := RDatabase.GetHeaderFlags;
-  if edtFlags.text[1] = '1' then
-    lstDBFlags.Items.Add('This file is an active shadow file');
-  if edtFlags.text[2] = '1' then
-    lstDBFlags.Items.Add('The database is in forced writes mode');
-  if edtFlags.text[4] = '1' then
-    lstDBFlags.Items.Add('Dont calculate checksums');
-  if edtFlags.text[5] = '1' then
-    lstDBFlags.Items.Add('Dont reserve space for record versions in pages');
+  lstDBFlags.Items.Clear; // Очищаем перед добавлением
+  edtFlags.text := ''; // Очищаем поле
 
-  { https://firebirdsql.org/manual/fbint-page-1.html
-    hdr_active_shadow	0x01 (bit 0)	This file is an active shadow file.
-    hdr_force_write	0x02 (bit 1)	The database is in forced writes mode.
-    Unused	0x04 (bit 2)	Was previously for short term journalling, no longer used.
-    Unused	0x08 (bit 3)	Was previously for long term journalling, no longer used.
-    hdr_no_checksums	0x10 (bit 4)	Don't calculate checksums.
-    hdr_no_reserve	0x20 (bit 5)	Don'r reserve space for record versions in pages.
-    Unused	0x40 (bit 6)	Was used to indicate that the shared cache file was disabled.
-    hdr_shutdown_mask (bit one of two)	0x1080 (bits 7 and 12)	Used with bit 12 (see below) to indicate the database shutdown mode.
-    hdr_sql_dialect_3	0x100 (bit 8)	If set, the database is using SQL dialect 3.
-    hdr_read_only	0x200 (bit 9)	Database is in read only mode.
-    hdr_backup_mask	0xC00 (bits 10 and 11)	Indicates the current backup mode.
-    hdr_shutdown_mask (bit two of two)	0x1080 (bits 7 and 12)	Used with bit 7 (see above) to indicate the database shutdown mode
-  }
-  if edtFlags.text[9] = '1' then
-    lstDBFlags.Items.Add('Dialect 3');
-  if edtFlags.text[10] = '1' then
-    lstDBFlags.Items.Add('Read Only');
+  if not Assigned(FFlagManager) then
+  begin
+    lstDBFlags.Items.Add('No database loaded.');
+    Exit;
+  end;
+
+  try
+    Flags := FFlagManager.GetFlags;
+
+    // Формируем строку для отображения (например, бинарное представление или просто список)
+    // Для простоты, выведем список активных флагов
+    edtFlags.text := 'Active flags: ';
+    if Flags.ActiveShadow then edtFlags.text := edtFlags.text + 'ActiveShadow, ';
+    if Flags.ForceWrite then edtFlags.text := edtFlags.text + 'ForceWrite, ';
+    if Flags.NoChecksums then edtFlags.text := edtFlags.text + 'NoChecksums, ';
+    if Flags.NoReserve then edtFlags.text := edtFlags.text + 'NoReserve, ';
+    if Flags.SqlDialect3 then edtFlags.text := edtFlags.text + 'SqlDialect3, ';
+    if Flags.ReadOnly then edtFlags.text := edtFlags.text + 'ReadOnly, ';
+    // Убираем последнюю запятую
+    if edtFlags.text.EndsWith(', ') then
+      edtFlags.text := edtFlags.text.Remove(edtFlags.text.Length - 2);
+
+    // Или можно вывести все флаги с указанием статуса
+    lstDBFlags.Items.Add(Format('Active Shadow: %s', [BoolToStr(Flags.ActiveShadow, True)]));
+    lstDBFlags.Items.Add(Format('Force Write: %s', [BoolToStr(Flags.ForceWrite, True)]));
+    lstDBFlags.Items.Add(Format('No Checksums: %s', [BoolToStr(Flags.NoChecksums, True)]));
+    lstDBFlags.Items.Add(Format('No Reserve: %s', [BoolToStr(Flags.NoReserve, True)]));
+    lstDBFlags.Items.Add(Format('SQL Dialect 3: %s', [BoolToStr(Flags.SqlDialect3, True)]));
+    lstDBFlags.Items.Add(Format('Read Only: %s', [BoolToStr(Flags.ReadOnly, True)]));
+
+  except
+    on E: Exception do
+    begin
+      lstDBFlags.Items.Add('Error getting flags: ' + E.Message);
+    end;
+  end;
 end;
 
 procedure TfrmMain.clearUserGui;
@@ -354,215 +325,74 @@ begin
   edtFlags.text := '';
   lstLog.Items.Clear;
   edtPageNumber.Enabled := False;
-  btnSeek.Enabled := False
+  btnSeek.Enabled := False;
 end;
-
 
 procedure TfrmMain.checkDB;
 var
-  FS: TFileStream;
-  FileSize: Int64;
-  HeaderPage: THdrPage;
-  CountPIPPage: integer;
-  CountTIPPage: integer;
-  CountPointerPage: integer;
-  CountDataPage: integer;
-  CountIndexRootPage: integer;
-  CountBlobPage: integer;
-  CountGeneratorPage: integer;
-  CountWriteAheadLogPage: integer;
-  CountUnknownPage: integer;
-  CountRelations: integer;
-  NumRead, i: integer;
-  pages: tippage;
-  DataPage: TDataPage;
-  Relations: TStringList;
+  PageStats: TPageTypeStats;
+  TxStats: TTransactionStats;
+  RelStats: TRelationStatsArray;
+  i: Integer;
 begin
-  if not Assigned(RDatabase) then
+  if not Assigned(FDatabaseStats) then
     exit;
-  Relations := TStringList.Create;
-  Relations.Sorted := True;
-  Relations.Duplicates := dupIgnore;
-  lstLog.Items.Clear;
-  dsPages.Close;
-  lstLog.Items.Add('Data base: ' + RDatabase.NameDB);
-  lstLog.Items.Add('Database size: ' + IntToStr(RDatabase.DBFileSize));
-  if RDatabase.Curr_page_size = 0 then
-    Application.MessageBox('Database page size is 0. ERROR!', 'Wrong page size',
-      MB_OK + MB_ICONERROR);
-  lstLog.Items.Add('Count Database Pages: ' +
-    floatToStr(Round(RDatabase.DBFileSize / RDatabase.Curr_page_size)));
-  lstLog.Items.Add('Database page size: ' + IntToStr(RDatabase.Curr_page_size));
-  lstLog.Items.Add('Type pages detecting: ');
-  CountPIPPage := 0;
-  CountTIPPage := 0;
-  CountPointerPage := 0;
-  CountDataPage := 0;
-  CountIndexRootPage := 0;
-  CountBlobPage := 0;
-  CountGeneratorPage := 0;
-  CountWriteAheadLogPage := 0;
-  CountUnknownPage := 0;
-  CountRelations := 0;
-  pbDetectedPage.Min := 0;
-  pbDetectedPage.Max := Round(RDatabase.DBFileSize / RDatabase.Curr_page_size);
-  pbDetectedPage.Position := 1;
-  dsPages.CreateDataSet;
-  i := 1;
-  while not RDatabase.EmptyDataPage do
-  begin
-    DataPage := RDatabase.GetNextDataPage;
-    case DataPage.fix_data.pagHdr_Header.pag_type of
-      1:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Header page';
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-          lstLog.Items.Add('First pointer page number: '+inttostr(RDatabase.GetHeaderPage.fix_data.hdr_pages));
-        end;
-      2:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Page Inventory Page (PIP)';
-          inc(CountPIPPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-        end;
-      3:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Page Inventory Page (TIP)';
-          inc(CountTIPPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-        end;
-      4:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Pointer Page';
-          inc(CountPointerPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-        end;
-      5:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Data Page';
-          inc(CountDataPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Fields[4].AsInteger := DataPage.fix_data.dpg_relation;
-          Relations.Add(intTostr(DataPage.fix_data.dpg_relation));
-          dsPages.Post;
-        end;
-      6:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Index Root Page';
-          inc(CountIndexRootPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-        end;
-      7:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Index B-Tree Page';
-          inc(CountBlobPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-        end;
-      8:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Blob Page';
-          inc(CountBlobPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-        end;
-      9:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Generator Page';
-          inc(CountGeneratorPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-        end;
-      10:
-        begin
-          dsPages.Insert;
-          dsPages.Fields[0].AsInteger := i;
-          dsPages.Fields[1].AsString := ' Write Ahead Log page';
-          inc(CountWriteAheadLogPage);
-          dsPages.Fields[2].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_type;
-          dsPages.Fields[3].AsInteger :=
-            DataPage.fix_data.pagHdr_Header.pag_checksum;
-          dsPages.Post;
-        end;
-    else
-      begin
-        dsPages.Insert;
-        dsPages.Fields[0].AsInteger := i;
-        dsPages.Fields[1].AsString := ' Unknown page';
-        inc(CountUnknownPage);
-        dsPages.Fields[2].AsInteger := DataPage.fix_data.pagHdr_Header.pag_type;
-        dsPages.Post;
-      end
+
+  try
+    lstLog.Items.Clear;
+    dsPages.Close;
+    dsPages.CreateDataSet;
+
+    lstLog.Items.Add('Database: ' + FPageAnalyzer.FileName);
+    lstLog.Items.Add('Database size: ' + IntToStr(FPageAnalyzer.FileSize));
+    lstLog.Items.Add('Database page size: ' + IntToStr(FPageAnalyzer.PageSize));
+    lstLog.Items.Add('Scanning pages...');
+
+    // Вычисляем статистику через FDatabaseStats
+    FDatabaseStats.CalculateStats;
+
+    // Получаем результаты
+    PageStats := FDatabaseStats.PageStats;
+    TxStats := FDatabaseStats.TransactionStats;
+    RelStats := FDatabaseStats.RelationStats;
+
+    // Обновляем прогресс бар (для наглядности, хотя теперь это быстро)
+    pbDetectedPage.Min := 0;
+    pbDetectedPage.Max := 100; // Условно
+    pbDetectedPage.Position := 100;
+
+    // Выводим результаты подсчета
+    lstLog.Items.Add('--- Page Type Summary ---');
+    lstLog.Items.Add('Count Header Pages: ' + IntToStr(PageStats.HeaderPages));
+    lstLog.Items.Add('Count Page Inventory Pages (PIP): ' + IntToStr(PageStats.PipPages));
+    lstLog.Items.Add('Count Transaction Inventory Pages (TIP): ' + IntToStr(PageStats.TipPages));
+    lstLog.Items.Add('Count Pointer Pages: ' + IntToStr(PageStats.PointerPages));
+    lstLog.Items.Add('Count Data Pages: ' + IntToStr(PageStats.DataPages));
+    lstLog.Items.Add('Count Index Root Pages: ' + IntToStr(PageStats.IndexRootPages));
+    lstLog.Items.Add('Count Index B-Tree Pages: ' + IntToStr(PageStats.IndexBtreePages)); // Исправлено
+    lstLog.Items.Add('Count Blob Pages: ' + IntToStr(PageStats.BlobPages));
+    lstLog.Items.Add('Count Generator Pages: ' + IntToStr(PageStats.GeneratorPages));
+    lstLog.Items.Add('Count Write Ahead Log Pages: ' + IntToStr(PageStats.WalPages));
+    lstLog.Items.Add('Count Unknown Pages: ' + IntToStr(PageStats.UnknownPages));
+
+    lstLog.Items.Add('--- Transaction Summary ---');
+    lstLog.Items.Add('Count Active Transactions: ' + IntToStr(TxStats.Active));
+    lstLog.Items.Add('Count Limbo Transactions: ' + IntToStr(TxStats.Limbo));
+    lstLog.Items.Add('Count Dead Transactions: ' + IntToStr(TxStats.Dead));
+    lstLog.Items.Add('Count Committed Transactions: ' + IntToStr(TxStats.Committed));
+    lstLog.Items.Add('Total Transactions: ' + IntToStr(TxStats.Total));
+
+    lstLog.Items.Add('--- Relation Summary ---');
+    lstLog.Items.Add('Count Relations: ' + IntToStr(Length(RelStats)));
+    for i := 0 to High(RelStats) do
+    begin
+      lstLog.Items.Add(Format('  Relation ID: %d, Page Count: %d, Record Fragments Count: %d',
+        [RelStats[i].RelationID, RelStats[i].PageCount, RelStats[i].RecordCount]));
     end;
-    inc(i);
-    pbDetectedPage.Position := i;
-    Application.ProcessMessages;
+
+  finally
+    dsPages.Close;
   end;
-  lstLog.Items.Add('Count Page Inventory Pages (PIP) ' +
-    IntToStr(CountPIPPage));
-  lstLog.Items.Add('Count Page Inventory Pages (TIP) ' +
-    IntToStr(CountTIPPage));
-  lstLog.Items.Add('Count Pointer Page ' + IntToStr(CountPointerPage));
-  lstLog.Items.Add('Count Data Pages ' + IntToStr(CountDataPage));
-  lstLog.Items.Add('Count Index Root Pages ' + IntToStr(CountIndexRootPage));
-  lstLog.Items.Add('Count Blob Pages ' + IntToStr(CountBlobPage));
-  lstLog.Items.Add('Count Generator Pages ' + IntToStr(CountGeneratorPage));
-  lstLog.Items.Add('Count Write Ahead Log Pages ' +
-    IntToStr(CountWriteAheadLogPage));
-  lstLog.Items.Add('Count Unknown Pages ' + IntToStr(CountUnknownPage));
-  lstLog.Items.Add('Count Relations ' + IntToStr(Relations.Count));
-  FreeAndNil(Relations)
 end;
 
 procedure TfrmMain.FormShow(Sender: TObject);
@@ -572,107 +402,139 @@ begin
   pgcServices.pages[0].Show;
 end;
 
-// Write flag function
 procedure TfrmMain.btnWriteFlagsClick(Sender: TObject);
 var
-  flags, resString: string;
-  s: Byte;
-  i: integer;
+  NewFlags: TDatabaseFlags;
 begin
-  flags := RDatabase.GetHeaderFlags;
-  if flags[1] = '1' then
-    lstDBFlags.Items.Add('This file is an active shadow file');
-  if flags[2] = '1' then
-    lstDBFlags.Items.Add('The database is in forced writes mode');
-  if flags[4] = '1' then
-    lstDBFlags.Items.Add('Dont calculate checksums');
-  if flags[5] = '1' then
-    lstDBFlags.Items.Add('Dont reserve space for record versions in pages');
-  if flags[9] = '1' then
-    lstDBFlags.Items.Add('Dialect 3');
-  if flags[10] = '1' then
-    lstDBFlags.Items.Add('Read Only');
-  if chkSetFW.Checked then
-    flags[2] := '1'
-  else
-    flags[2] := '0';
-  if chkReadOnly.Checked then
-    flags[10] := '1'
-  else
-    flags[10] := '0';
-  RDatabase.SetHeaderFlags(flags);
-end;
-
-procedure TfrmMain.tsFlagsShow(Sender: TObject);
-var
-  flags: string;
-begin
-  { flags:=RDatabase.GetHeaderFlags;
-    if  edtFlags.Text[10]  = '1'  then   chkReadOnly.Checked:=True;
-    if  edtFlags.Text[2]  = '1'  then   chkSetFW.Checked:=True; }
-
-end;
-
-procedure TfrmMain.pgcServicesChange(Sender: TObject);
-var
-  flags: TCaption;
-begin
-  if tsFlags.Showing then
+  if not Assigned(FFlagManager) then
   begin
-    if Assigned(RDatabase) then
-    begin
-      flags := RDatabase.GetHeaderFlags;
-      if flags[10] = '1' then
-        chkReadOnly.Checked := true;
-      if flags[2] = '1' then
-        chkSetFW.Checked := true;
-    end
+    Application.MessageBox('No database loaded.', 'Error', MB_OK + MB_ICONERROR);
+    Exit;
   end;
-  if tsGenerateNewPage.Showing then
-    if Assigned(RDatabase) then
+
+  try
+    NewFlags := FFlagManager.GetFlags;
+
+    // Обновляем флаги в соответствии с чекбоксами
+    NewFlags.ForceWrite := chkSetFW.Checked;
+    NewFlags.ReadOnly := chkReadOnly.Checked;
+    // Добавьте другие флаги по необходимости
+
+    // Устанавливаем флаги через FFlagManager
+    FFlagManager.SetFlags(NewFlags);
+
+    Application.MessageBox('Header flags updated!', 'Information', MB_OK + MB_ICONINFORMATION);
+
+    UpdateFlagCheckboxesFromManager;
+  except
+    on E: Exception do
     begin
-      sePosition.MaxValue :=
-        Round(RDatabase.DBFileSize / RDatabase.Curr_page_size);
+      Application.MessageBox(PChar('Error setting flags: ' + E.Message), 'Error', MB_OK + MB_ICONERROR);
+    end;
+  end;
+end;
+
+procedure TfrmMain.UpdateFlagCheckboxesFromManager;
+var
+  CurrentFlags: TDatabaseFlags;
+begin
+  if not Assigned(FFlagManager) then Exit;
+
+  try
+    CurrentFlags := FFlagManager.GetFlags;
+    chkSetFW.Checked := CurrentFlags.ForceWrite;
+    chkReadOnly.Checked := CurrentFlags.ReadOnly;
+  except
+    on E: Exception do
+    begin
+      lstDBFlags.Items.Add('Error updating flags UI: ' + E.Message);
+    end;
+  end;
+end;
+
+// tsFlagsShow - теперь использует UpdateFlagCheckboxesFromManager
+procedure TfrmMain.tsFlagsShow(Sender: TObject);
+begin
+  // Обновляем чекбоксы при показе вкладки
+  UpdateFlagCheckboxesFromManager;
+end;
+
+// pgcServicesChange - обновляет MaxValue для sePosition
+procedure TfrmMain.pgcServicesChange(Sender: TObject);
+begin
+  if tsGenerateNewPage.Showing then
+    if Assigned(FPageAnalyzer) then
+    begin
+      sePosition.MaxValue := FPageAnalyzer.GetLastPageNumber;
     end;
 end;
 
 procedure TfrmMain.btnGenerateClick(Sender: TObject);
 begin
-  if RDatabase.GenerateNewPagePosition(cbbTypePageGen.ItemIndex,
-    sePosition.Value) = 1 then
-    Application.MessageBox('Page Added!', 'Information', MB_OK + MB_ICONWARNING)
+  // Эта функция требует доработки, возможно, через FPageAnalyzer или TFBDatabase
+  lstLog.Items.Add('btnGenerateClick: Not implemented via new modules yet.');
+  // Если TFBDatabase.Create нужен для генерации, используйте его или добавьте логику в FPageAnalyzer
+  // Пример:
+  // if FCurrentDBFileName <> '' then
+  // begin
+  //   var TempDB := TFBDatabase.Create(FCurrentDBFileName);
+  //   try
+  //     if TempDB.GenerateNewPagePosition(cbbTypePageGen.ItemIndex, sePosition.Value) = 1 then
+  //       Application.MessageBox('Page Added!', 'Information', MB_OK + MB_ICONWARNING);
+  //   finally
+  //     TempDB.Free;
+  //   end;
+  // end;
 end;
 
 procedure TfrmMain.btnGotoPageClick(Sender: TObject);
 var
-  DataPage: TDataPage;
-  i: integer;
+  PageNum: Int64;
+  PageInfo: TPageInfo;
+  PageFragments: TRecordFragmentsArray;
+  i, j: integer;
 begin
-  DataPage := RDatabase.GetDataPage(StrToIntDef(edtNPage.text, 0));
-  if DataPage.fix_data.pagHdr_Header.pag_type <> 5 then
+  PageNum := StrToIntDef(edtNPage.text, 0);
+
+  if (PageNum < 0) or (PageNum > FPageAnalyzer.GetLastPageNumber) then
   begin
-    Application.MessageBox('It is not DataPage, please select DataPage',
-      'Information', MB_OK + MB_ICONWARNING);
-    exit;
+    Application.MessageBox('Page number out of bounds.', 'Error', MB_OK + MB_ICONERROR);
+    Exit;
   end;
+
   try
+    PageInfo := FPageAnalyzer.GetPageInfo(PageNum);
+
+    if PageInfo.Header.pag_type <> $05 then // 0x05 = Data Page
+    begin
+      Application.MessageBox('It is not a Data Page, please select a Data Page.',
+        'Information', MB_OK + MB_ICONWARNING);
+      exit;
+    end;
+
     btnGotoPage.Enabled := False;
-    DataPage := RDatabase.GetDataPage(StrToIntDef(edtNPage.text, 0));
+    mmoData.Clear; // Очищаем Memo перед выводом
+
+    // Используем функцию из uDataPage для извлечения фрагментов
+    PageFragments := ExtractDataFragments(PageInfo.Buffer, PageInfo.Size);
+
     pbDataProgress.Min := 0;
-    pbDataProgress.Max := length(DataPage.dpg_repeat) - 1;
+    pbDataProgress.Max := Length(PageFragments) - 1; // Количество фрагментов
 
-     for i := 0 to length(DataPage.dpg_repeat)-1 do
-     begin
-       pbDataProgress.Position:=pbDataProgress.Position+1;
-       // mmoData.Text:=  mmoData.Text+' '+  StrToInt('$'+ByteToHex(DataPage.dpg_repeat[i].dpg_offset));
-       Application.ProcessMessages;
+    for i := 0 to High(PageFragments) do // Используем High для массива
+    begin
+      pbDataProgress.Position := i;
+      mmoData.Lines.Add('Fragment ' + IntToStr(i) + ', Offset: ' + IntToStr(PageFragments[i].Offset));
+      var hexData: string := '';
+      for j := 0 to High(PageFragments[i].Data) do
+      begin
+          hexData := hexData + IntToHex(PageFragments[i].Data[j], 2) + ' ';
+      end;
+      mmoData.Lines.Add('  Data (Hex): ' + Trim(hexData));
 
-       // mmoData.Text:=  mmoData.Text+' '+ByteToHex(DataPage.rhd_data[i]) ;
-       mmoData.Text:=  mmoData.Text+' '+Chr(StrToInt('$'+ByteToHex(DataPage.dpg_repeat[i].dpg_offset))) ;
-       {lstData.Items.Add(ByteToHex(DataData.rhd_data[i]));
-       lstData.Items.Add(Chr(StrToInt('$'+ByteToHex(DataData.rhd_data[i]))));}
-
-     end;
+      Application.ProcessMessages;
+    end;
+    mmoData.Lines.Add('--- End of Page Data ---');
   finally
    btnGotoPage.Enabled := True;
   end;
