@@ -3,7 +3,7 @@ unit uBtreePage;
 interface
 
 uses
-  Windows, SysUtils, uStructs;
+  Windows, SysUtils, uStructs, Math;
 
 const
   pag_left  = $01; // Это самая левая страница в уровне
@@ -16,7 +16,6 @@ const
   key_dupeq  = $08; // Ключ помечен как дубликат (для уникальных индексов)
 
 type
-  // Фиксированная часть заголовка B-Tree страницы
   TBtreePageHeader = packed record
     pag_header: TPag;  // 0x00-0x0F - Стандартный заголовок
     pag_next: SLong;   // 0x10-0x13 - Указатель на следующую страницу (лист)
@@ -28,18 +27,18 @@ type
     // pag_keys начинается с байта 0x20
   end;
 
-  // Тип для представления одного ключа
+
   TBtreeKey = record
     Length: UShort;
     Flags: SChar;
-    Data: TBytes; // Данные ключа
-    PageOrRecordNumber: SLong; // Для внутренних узлов - номер страницы, для листьев - номер записи
+    Data: TBytes;
+    PageOrRecordNumber: SLong;
   end;
 
-  // Тип для массива ключей
+
   TBtreeKeyArray = array of TBtreeKey;
 
-  // Класс для анализа B-Tree страницы
+
   TBtreePageAnalyzer = class
   private
     FPageSize: Integer;
@@ -47,8 +46,12 @@ type
     FHeader: TBtreePageHeader;
     FPageData: TBytes; // Данные всей страницы (для извлечения ключей)
 
-    // Внутренняя функция для получения ключа по смещению
+
     function GetKeyAtOffset(Offset: Integer): TBtreeKey;
+
+    function GetIsLeaf: Boolean;
+    function GetIsRoot: Boolean;
+    function GetIsLeftmost: Boolean;
   public
     // Конструктор - принимает байты страницы, размер страницы и номер страницы
     constructor Create(const PageBuffer: TBytes; PageSize: Integer; PageNum: ULong);
@@ -67,11 +70,11 @@ type
     // Получить номер родительской страницы
     property ParentPage: SLong read FHeader.pag_parent;
     // Это листовая страница?
-    property IsLeaf: Boolean read (FHeader.pag_flags and pag_leaf) <> 0;
+    property IsLeaf: Boolean read GetIsLeaf; // Используем метод-геттер
     // Это корневая страница?
-    property IsRoot: Boolean read (FHeader.pag_flags and pag_root) <> 0;
+    property IsRoot: Boolean read GetIsRoot; // Используем метод-геттер
     // Это самая левая страница?
-    property IsLeftmost: Boolean read (FHeader.pag_flags and pag_left) <> 0;
+    property IsLeftmost: Boolean read GetIsLeftmost; // Используем метод-геттер
 
   end;
 
@@ -107,32 +110,31 @@ var
   KeyFlags: SChar;
   KeyDataOffset, KeyPageOffset: Integer;
 begin
-  // Проверяем границы
+
   if (Offset + 2 {key_length} + 1 {key_flags} > Length(FPageData)) then
     raise Exception.Create('Invalid offset for key in B-Tree page.');
 
-  // Читаем key_length (2 байта)
   KeyLength := PWord(@FPageData[Offset])^;
   Inc(Offset, 2);
 
-  // Читаем key_flags (1 байт)
+
   KeyFlags := PShortInt(@FPageData[Offset])^;
   Inc(Offset, 1);
 
-  // Проверяем, не выходит ли длина данных за пределы
+
   if (Offset + KeyLength + 4 {key_page} > Length(FPageData)) then
     raise Exception.Create('Key length exceeds page boundary.');
 
-  // Копируем key_data
+
   SetLength(Result.Data, KeyLength);
   if KeyLength > 0 then
     Move(FPageData[Offset], Result.Data[0], KeyLength);
   Inc(Offset, KeyLength);
 
-  // Читаем key_page (4 байта)
+
   Result.PageOrRecordNumber := PLongInt(@FPageData[Offset])^;
 
-  // Заполняем поля результата
+
   Result.Length := KeyLength;
   Result.Flags := KeyFlags;
 end;
@@ -145,19 +147,32 @@ var
 begin
   SetLength(Keys, FHeader.pag_count);
 
-  // Смещение начала массива ключей
+
   CurrentOffset := SizeOf(TBtreePageHeader);
 
   for i := 0 to FHeader.pag_count - 1 do
   begin
     Keys[i] := GetKeyAtOffset(CurrentOffset);
-
-    // Вычисляем смещение следующего ключа
-    // key_length(2) + key_flags(1) + key_data(key_length) + key_page(4)
     CurrentOffset := CurrentOffset + 2 + 1 + Keys[i].Length + 4;
   end;
 
   Result := Keys;
+end;
+
+
+function TBtreePageAnalyzer.GetIsLeaf: Boolean;
+begin
+  Result := (FHeader.pag_flags and pag_leaf) <> 0;
+end;
+
+function TBtreePageAnalyzer.GetIsRoot: Boolean;
+begin
+  Result := (FHeader.pag_flags and pag_root) <> 0;
+end;
+
+function TBtreePageAnalyzer.GetIsLeftmost: Boolean;
+begin
+  Result := (FHeader.pag_flags and pag_left) <> 0;
 end;
 
 end.

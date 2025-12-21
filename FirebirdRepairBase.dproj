@@ -122,6 +122,7 @@
         <DCCReference Include="uBtreePage.pas"/>
         <DCCReference Include="uDatabaseStats.pas"/>
         <DCCReference Include="uFlagManager.pas"/>
+        <DCCReference Include="uRecordParser.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
