@@ -1,45 +1,114 @@
 unit uDataPage;
 
-{
-Dpg_header: The page starts with a standard page header. In this page type, the pag_flags byte is used as follows:
-  Bit 0 - dpg_orphan. Setting this bit indicates that this page is an orphan - it has no entry in the pointer page for this relation. This may indicate a possible database corruption.
-  Bit 1 - dpg_full. Setting this bit indicates that the page is full up. This will be also seen in the bitmap array on the corresponding pointer page for this table.
-  Bit 2 - dpg_large. Setting this bit indicates that a large object is stored on this page. This will be also seen in the bitmap array on the corresponding pointer page for this table.
-
-Dpg_sequence: Four bytes, signed. Offset 0x10 on the page. This field holds the sequence number for this page in the list of pages assigned to this table within the database. The first page of any table has sequence zero.
-Dpg_relation: Two bytes, unsigned. Offset 0x12 on the page. The relation number for this table. This corresponds to RDB$RELATIONS.RDB$RELATION_ID.
-Dpg_count: Two bytes, unsigned. Offset 0x14 on the page. The number of records (or record fragments) on this page. In other words, the number of entries in the dpg_rpt array.
-Dpg_rpt: This is an array of two byte unsigned values. The array begins at offset 0x18 on the page and counts upwards from the low address to the higher address as each new record fragment is added.
-         The two fields in this array are:
-Dpg_offset: Two bytes, unsigned. The offset on the page where the record fragment starts. If the value here is zero and the length is zero, then this is an unused array entry. The offset is from the start address of the page. For example, if the offset is 0x0fc8 and this is a database with a 4Kb page size, and the page in question is page 0xcd (205 decimal) then we have the offset of 0xcdfc8 because 0xcd000 is the actual address (in the database file) of the start of the page.
-Dpg_length: Two bytes, unsigned. The length of this record fragment in byte   }
-
 interface
 
-uses uPag, Windows;
+uses
+  Windows, SysUtils, uStructs, Math;
 
 const
   MAX_PAGE_SIZE = 32768;
   MIN_PAGE_SIZE = 1024;
 
 type
-  TDpg_rpt = record
+  TDpg_rpt = packed record
     dpg_offset: Word;
     dpg_length: Word;
   end;
 
-  TData_Page = record
-    pagHdr_Header: TPag;
-    dpg_sequence: Longint;
-    dpg_relation: Word;
-    dpg_count: Word;
+
+  TData_Page_Fixed_Part = packed record
+    pagHdr_Header: TPag;        // 0x00 - Стандартный заголовок (16 байт)
+    dpg_sequence: Longint;      // 0x10 - Номер в последовательности (4 байта)
+    dpg_relation: Word;         // 0x14 - ID отношения (2 байта)
+    dpg_count: Word;            // 0x16 - Количество фрагментов (2 байта)
   end;
 
-  TDataPage = record
-    fix_data: TData_Page;
-    dpg_repeat: array [0 .. (MAX_PAGE_SIZE - sizeof(TData_Page))] of TDpg_rpt;
+  TRecordFragment = record
+    Offset: Word;
+    Data: TBytes; // Используем динамический массив байтов
   end;
+  TRecordFragmentsArray = array of TRecordFragment;
+function ExtractDataFragments(const PageBuffer: TBytes; PageSize: Integer): TRecordFragmentsArray;
+
+// Функция для получения фиксированной части заголовка Data Page из буфера
+function GetDataPageHeader(const PageBuffer: TBytes): TData_Page_Fixed_Part;
 
 implementation
+
+function GetDataPageHeader(const PageBuffer: TBytes): TData_Page_Fixed_Part;
+begin
+  if Length(PageBuffer) < SizeOf(TData_Page_Fixed_Part) then
+    raise Exception.Create('Page buffer too small for Data Page header.');
+
+  if PageBuffer[0] <> $05 then // pag_type == 0x05
+    raise Exception.Create('Not a Data Page.');
+
+  // Используем Move для копирования байтов в структуру
+  Move(PageBuffer[0], Result, SizeOf(TData_Page_Fixed_Part));
+end;
+
+function ExtractDataFragments(const PageBuffer: TBytes; PageSize: Integer): TRecordFragmentsArray;
+var
+  Header: TData_Page_Fixed_Part;
+  Fragments: TRecordFragmentsArray;
+  i, Count: Integer; // Тип для Count
+  ActualCount: Integer; // Тип для ActualCount
+  DpgRepeatStartOffset: Integer;
+  DataAreaStartOffset: Integer; // Новое: начало области данных (после dpg_repeat)
+  FragmentEntryOffset: Integer;
+  FragmentRec: TDpg_rpt;
+  FragmentStart, FragmentEnd: Integer;
+  FragmentLength: Word;
+  MaxPossibleCount: Integer; // Новое: максимальное возможное количество записей
+begin
+  Result := nil; // Инициализация результата
+
+  // Проверка на минимальный размер и соответствие размера буфера
+  if (PageSize < MIN_PAGE_SIZE) or (PageSize > MAX_PAGE_SIZE) or
+     (Length(PageBuffer) <> PageSize) then
+  begin
+    Exit; // Возвращаем nil, если размер неверен
+  end;
+
+  // Получаем фиксированную часть заголовка
+  Header := GetDataPageHeader(PageBuffer);
+
+  Count := Header.dpg_count;
+
+  DpgRepeatStartOffset := SizeOf(TData_Page_Fixed_Part); // = 0x18
+
+
+  MaxPossibleCount := (PageSize - DpgRepeatStartOffset) div SizeOf(TDpg_rpt);
+
+
+  ActualCount := IfThen(Count < MaxPossibleCount, Count, MaxPossibleCount);
+
+  DataAreaStartOffset := DpgRepeatStartOffset + (ActualCount * SizeOf(TDpg_rpt));
+
+  SetLength(Fragments, ActualCount);
+
+  for i := 0 to ActualCount - 1 do
+  begin
+    FragmentEntryOffset := DpgRepeatStartOffset + (i * SizeOf(TDpg_rpt));
+    Move(PageBuffer[FragmentEntryOffset], FragmentRec, SizeOf(TDpg_rpt));
+    FragmentStart := FragmentRec.dpg_offset;
+    FragmentLength := FragmentRec.dpg_length;
+    if (FragmentLength > 0) and
+       (FragmentStart >= DataAreaStartOffset) and
+       (FragmentStart <= Cardinal(PageSize - FragmentLength)) then
+    begin
+      Fragments[i].Offset := FragmentStart;
+      SetLength(Fragments[i].Data, FragmentLength);
+      Move(PageBuffer[FragmentStart], Fragments[i].Data[0], FragmentLength);
+    end
+    else
+    begin
+      Fragments[i].Offset := FragmentStart;
+      SetLength(Fragments[i].Data, 0);
+    end;
+  end;
+
+  Result := Fragments;
+end;
 
 end.

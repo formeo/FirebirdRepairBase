@@ -5,16 +5,17 @@ uses
   Windows,
   SysUtils,
   Dialogs,
-  main in 'main.pas' {frmMain} ,
-  struck in 'struck.pas',
+  main in 'main.pas' {frmMain},
+  uStructs in 'uStructs.pas',
   uCommon in 'uCommon.pas',
-  uDatabase in 'uDatabase.pas',
-  uHeaderPage in 'uHeaderPage.pas',
-  uPag in 'uPag.pas',
   uTipPage in 'uTipPage.pas',
   uDataPage in 'uDataPage.pas',
   uGenPage in 'uGenPage.pas',
-  uPoiner in 'uPoiner.pas';
+  uPointer in 'uPointer.pas',
+  uPageAnalyzer in 'uPageAnalyzer.pas',
+  uBtreePage in 'uBtreePage.pas',
+  uDatabaseStats in 'uDatabaseStats.pas',
+  uFlagManager in 'uFlagManager.pas';
 
 {$R *.res}
 
@@ -23,7 +24,7 @@ begin
     Application.Initialize;
     Application.Title := 'FirebirdRepairBase';
     Application.CreateForm(TfrmMain, frmMain);
-    Application.Run;
+  Application.Run;
   except
     on E: Exception do
     begin

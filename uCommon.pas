@@ -3,125 +3,70 @@ unit uCommon;
 interface
 
 uses
-  Classes, Windows, SysUtils;
+  Classes, Windows, SysUtils, uStructs;
 
 const
   MAX_PAGE_SIZE = 32768;
   MIN_PAGE_SIZE = 1024;
 
 type
-  SChar = Shortint;
-  SShort = Smallint;
-  UShort = Word;
-  SLong = Longint;
-  ULong = LongWord;
-
-  TPag = packed record
-    pag_type: SChar;
-    pag_flags: SChar;
-    pag_checksum: UShort;
-    pag_generation: ULong;
-    pag_seqno: ULong;
-    pg_offset: ULong;
-  end;
-
-  tip = packed record
-    tip_header: TPag;
-    tip_next: SLong;
-  end;
-
-  tippage = packed record
-    fix_data: tip;
-    tip_transactions: array [0 .. (4096 - sizeof(tip))] of UCHAR;
-  end;
-
-  THdr = packed record
-    hdr_header: TPag;
-    hdr_page_size: UShort;
-    hdr_ods_version: UShort;
-    hdr_pages: SLong;
-    hdr_next_page: ULong;
-    hdr_oldest_transaction: SLong;
-    hdr_oldest_active: SLong;
-    hdr_next_transaction: SLong;
-    hdr_sequence: UShort;
-    hdr_flags: UShort;
-    hdr_creation_date: array [0 .. 1] of SLong;
-    hdr_attachment_id: SLong;
-    hdr_shadow_count: SLong;
-    hdr_implementation: SShort;
-    hdr_ods_minor: UShort;
-    hdr_ods_minor_original: UShort;
-    hdr_end: UShort;
-    hdr_page_buffers: ULong;
-    hdr_bumped_transaction: SLong;
-    hdr_oldest_snapshot: SLong;
-    hdr_misc: array [0 .. 3] of SLong;
-  end;
-
-  THdrPage = packed record
-    fix_data: THdr;
-    var_data: array [0 .. (MAX_PAGE_SIZE - sizeof(THdr))] of UCHAR;
-  end;
-
-  Tgenerator_page = record
-    gpg_header: TPag;
-    gpg_sequence: ULong; // Sequence number
-    // Generator vector
-  end;
-
-  Tgnrtr_page = record
-    fix_data1: Tgenerator_page; // Sequence number
-    gpg_values: array [0 .. (MAX_PAGE_SIZE - sizeof(Tgenerator_page))] of Int64;
-    // Generator vector
-  end;
-
-  PDpg_repeat = ^TDpg_rpt;
-
-  TDpg_rpt = record
-    dpg_offset: Word;
-    dpg_length: Word;
-  end;
-
-  TData_Page = record
-    pagHdr_Header: TPag;
-    dpg_sequence: Longint;
-    dpg_relation: Word;
-    dpg_count: Word;
-  end;
-
-  TDataPage = record
-    fix_data: TData_Page;
-    dpg_repeat: array [0 .. (MAX_PAGE_SIZE - sizeof(TData_Page))] of TDpg_rpt;
-  end;
-
   trhd1 = record
     rhd_transaction: SLong;
     rhd_b_page: SLong;
     rhd_b_line: UShort;
     rhd_flags: UShort;
-    rhd_format: UCHAR;
+    rhd_format: UChar; // Используем UChar из uStructs
   end;
 
+  // Возможно, нестандартная структура, используем TPag из uStructs, UChar из uStructs
   Trhd_page = record
     fix_data: trhd1;
-    rhd_data: array [0 .. (MAX_PAGE_SIZE - sizeof(trhd1))] of UCHAR;
+    rhd_data: array [0 .. (MAX_PAGE_SIZE - sizeof(trhd1))] of UChar; // Ошибка размера, как и в старом коде
   end;
 
+  // --- ИСПРАВЛЕНО: Используем TPag из uStructs ---
+  tip = packed record
+    tip_header: TPag; // Используем TPag из uStructs
+    tip_next: SLong;
+  end;
+
+  // --- ИСПРАВЛЕНО: Используем TPag из uStructs ---
+  // Массив tip_transactions должен быть динамическим при чтении страницы
+  // Эта структура определяет *фиксированную* часть
+  tippage_fixed_part = packed record
+    fix_data: tip;
+    // tip_transactions: array [0 .. N-1] of UCHAR; // Добавляется динамически
+  end;
+
+  // --- ИСПРАВЛЕНО: Используем TPag из uStructs ---
+  Tgenerator_page = record
+    gpg_header: TPag; // Используем TPag из uStructs
+    gpg_sequence: ULong; // Sequence number
+  end;
+
+  // --- ИСПРАВЛЕНО: Используем TPag из uStructs ---
+  // Массив gpg_values должен быть динамическим при чтении страницы
+  Tgnrtr_page_fixed_part = record
+    fix_data1: Tgenerator_page; // Sequence number
+    // gpg_values: array [0 .. N-1] of Int64; // Добавляется динамически
+  end;
+
+  // --- ИСПРАВЛЕНО: Используем TPag из uStructs ---
   Tpnr_page = record
-    pp_header: TPag;
+    pp_header: TPag; // Используем TPag из uStructs
     ppg_sequence: SLong;
     ppg_next: SLong;
     ppg_count: UShort;
     ppg_relation: UShort;
     ppg_min_space: UShort;
     ppg_max_space: UShort;
-
   end;
 
-  TPointer_page = record
+  // --- ИСПРАВЛЕНО: Используем TPag из uStructs ---
+  // Массив ppg_page должен быть динамическим при чтении страницы
+  TPointer_page_fixed_part = record
     fix_data: Tpnr_page;
-    ppg_page: array [0 .. (MAX_PAGE_SIZE - sizeof(Tpnr_page))] of SLong;
+    // ppg_page: array [0 .. N-1] of SLong; // Добавляется динамически
   end;
 
 function getCurrPageSize(const fileName: string): Integer;
@@ -287,10 +232,11 @@ begin
     end;
 end;
 
+
 procedure CopyDatabaseFile(ADatabaseOriginalPath: string;
   ADatabaseCopyPath: String);
 const
-  BUFFER_SIZE = 10240; // 10KB
+  BUFFER_SIZE = 10240;
 var
   FromFile, ToFile: TFileStream;
   Buffer: array [0 .. BUFFER_SIZE - 1] of byte;
@@ -301,7 +247,6 @@ begin
   FromFile := TFileStream.Create(ADatabaseOriginalPath, fmOpenRead or
     fmShareDenyNone);
   try
-    // Создадим или перезапишем целевой файл
     if FileExists(ADatabaseCopyPath) then
       ToFile := TFileStream.Create(ADatabaseCopyPath, fmOpenReadWrite or
         fmShareDenyWrite)
@@ -315,6 +260,7 @@ begin
       NumRead := FromFile.Read(Buffer[0], BUFFER_SIZE);
       while NumRead > 0 do
       begin
+        ToFile.Write(Buffer[0], NumRead);
         CopiedSize := CopiedSize + NumRead;
         NumRead := FromFile.Read(Buffer[0], BUFFER_SIZE);
       end;
