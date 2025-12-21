@@ -1,5 +1,13 @@
 # FirebirdRepairBase
 
+
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
+![Stars](https://img.shields.io/github/stars/formeo/project-name)
+![Issues](https://img.shields.io/github/issues/formeo/project-name)
+![Last Commit](https://img.shields.io/github/last-commit/formeo/project-name)
+
+
 A low-level tool for analyzing and potentially recovering data from **broken** Firebird database files (`.fdb`, `.gdb`). It bypasses the standard Firebird engine to read raw page structures and data.
 
 **Warning:** This is a **development version**. It directly manipulates database files. Always create a **backup** of your database before using this tool. Use at your own risk.
