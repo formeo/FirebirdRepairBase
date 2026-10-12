@@ -1,5 +1,10 @@
 # FirebirdRepairBase
 
+> [!CAUTION]
+> **Deprecated — superseded by [fbrescue](https://github.com/formeo/fbrescue).** This repository is no longer maintained.
+>
+> Do not use the header flag editor or the page rewrite. On Firebird 3–5 they write the wrong bits, and on any version they can silently clear shutdown mode and the nbackup lock, which loses committed data. Analysis results (transaction counts, record parsing, B-tree) are also wrong on several versions. Details: [#10](https://github.com/formeo/FirebirdRepairBase/issues/10).
+
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Stars](https://img.shields.io/github/stars/formeo/FirebirdRepairBase)
